@@ -1,26 +1,83 @@
 @import "tailwindcss";
 
+/* Theme custom properties forked from tree/index.html (:root block ~line 62,
+   dark-theme variants ~lines 531-537). Only the "paper"-ish default and a dark
+   variant are kept for Pando's admin chrome; tree's full theme picker (moss,
+   slate, sage, ash, terminal, etc.) is not ported since Pando is a single admin
+   UI, not a personal writing tool with user-selectable themes. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --bg: #f5f0e8;
+  --surface: #ede8de;
+  --text: #2c2416;
+  --accent: #8b6e4e;
+  --muted: #a89880;
+  --border: #d4c8b4;
+  --editor-font: ui-monospace, "SF Mono", Menlo, monospace;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #1a1a1a;
+    --surface: #252525;
+    --text: #d8d8d8;
+    --accent: #7a9fd4;
+    --muted: #555555;
+    --border: #2a2a2a;
   }
 }
 
+* { box-sizing: border-box; }
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, sans-serif;
 }
+
+.pando-editor {
+  height: 100%;
+  overflow: auto;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+/* Preview typography forked from tree/index.html (#preview rules, ~lines 344-407),
+   renamed from the #preview id to a reusable .pando-preview class since Pando's
+   admin composes editor+preview as a component, not a single fixed-id page. */
+.pando-preview {
+  line-height: 1.8;
+  font-family: var(--editor-font);
+}
+.pando-preview h1 { font-size: 2em; font-weight: 600; margin: 0.5em 0 0.3em; line-height: 1.3; }
+.pando-preview h2 { font-size: 1.5em; font-weight: 600; margin: 1em 0 0.3em; }
+.pando-preview h3 { font-size: 1.2em; font-weight: 600; margin: 0.8em 0 0.3em; }
+.pando-preview p { margin: 0.7em 0; }
+.pando-preview ul, .pando-preview ol { margin: 0.5em 0; padding-left: 1.5em; }
+.pando-preview ul { list-style-type: disc; }
+.pando-preview ol { list-style-type: decimal; }
+.pando-preview li { margin: 0.2em 0; padding-left: 0.3em; }
+.pando-preview blockquote { border-left: 3px solid var(--accent); padding: 4px 0 4px 16px; color: var(--muted); font-style: italic; margin: 0.8em 0; }
+.pando-preview code { font-family: ui-monospace, monospace; font-size: 0.88em; background: var(--surface); padding: 1px 5px; border-radius: 3px; }
+.pando-preview pre { background: var(--surface); padding: 14px 18px; border-radius: 6px; overflow-x: auto; margin: 0.8em 0; }
+.pando-preview pre code { background: none; padding: 0; }
+.pando-preview hr { border: none; border-top: 1px solid var(--border); margin: 1.5em 0; }
+.pando-preview a { color: var(--accent); }
+.pando-preview strong { font-weight: 700; }
+.pando-preview em { font-style: italic; }
+.pando-preview del { opacity: 0.5; text-decoration: line-through; }
+.pando-preview img { max-width: 100%; }
+
+/* Gallery grid — Pando addition, not present in tree. Real CSS grid for the
+   browser preview; the email renderer emits a table-based grid instead since
+   email clients don't reliably support CSS grid/flexbox. */
+.pando-preview .gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin: 0.8em 0;
+}
+.pando-preview .gallery-item { margin: 0; }
+.pando-preview .gallery-item img { width: 100%; height: auto; display: block; border-radius: 4px; }
+.pando-preview .gallery-item figcaption { font-size: 0.8em; color: var(--muted); margin-top: 4px; }
+
+.pando-preview .hero-image { width: 100%; height: auto; display: block; border-radius: 6px; margin-bottom: 1em; }
