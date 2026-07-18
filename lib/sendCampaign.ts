@@ -12,11 +12,62 @@ import { sendEmail } from "./resend";
 // of failing partway through a single oversized send.
 export const SEND_BATCH_SIZE = 90;
 
+// Emails within a batch are sent concurrently (not one at a time) so a full batch
+// finishes in a few seconds rather than tens of seconds — sequential sends at ~90
+// recipients could exceed Vercel's function duration limit even on Hobby's max
+// (60s) once network latency to Resend is accounted for. 8 concurrent requests keeps
+// well clear of that while not hammering Resend's own rate limits.
+const SEND_CONCURRENCY = 8;
+
 interface BatchResult {
   sent: number;
   failed: number;
   remaining: number;
   total: number;
+}
+
+async function sendToOne(
+  campaignId: string,
+  campaign: typeof campaigns.$inferSelect,
+  subscriber: typeof subscribers.$inferSelect,
+  settings: Awaited<ReturnType<typeof getOrCreateSettings>>
+): Promise<"sent" | "failed"> {
+  const html = renderEmailHtml(campaign, subscriber, settings);
+  try {
+    const result = await sendEmail({
+      to: subscriber.email,
+      from: `${settings.fromName} <${settings.fromEmail}>`,
+      replyTo: settings.replyTo,
+      subject: campaign.subject,
+      html,
+      headers: unsubscribeHeaders(subscriber.id),
+    });
+    await db.insert(sends).values({
+      campaignId,
+      subscriberId: subscriber.id,
+      status: "sent",
+      providerMessageId: result?.id,
+      sentAt: new Date(),
+    });
+    return "sent";
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Send failed.";
+    // Failed sends aren't retried automatically on the next batch — an existing
+    // "failed" row for this subscriber+campaign would otherwise be invisible to the
+    // unsent filter below (only "sent"/"delivered" count as completed), so this
+    // subscriber is naturally retried next batch. Overwrite any prior failed row
+    // to avoid duplicate log entries across retries.
+    const [priorFailure] = await db
+      .select()
+      .from(sends)
+      .where(and(eq(sends.campaignId, campaignId), eq(sends.subscriberId, subscriber.id)));
+    if (priorFailure) {
+      await db.update(sends).set({ status: "failed", error: message }).where(eq(sends.id, priorFailure.id));
+    } else {
+      await db.insert(sends).values({ campaignId, subscriberId: subscriber.id, status: "failed", error: message });
+    }
+    return "failed";
+  }
 }
 
 export async function sendCampaignBatch(campaignId: string, batchSize = SEND_BATCH_SIZE): Promise<BatchResult> {
@@ -36,42 +87,12 @@ export async function sendCampaignBatch(campaignId: string, batchSize = SEND_BAT
   let sent = 0;
   let failed = 0;
 
-  for (const subscriber of batch) {
-    const html = renderEmailHtml(campaign, subscriber, settings);
-    try {
-      const result = await sendEmail({
-        to: subscriber.email,
-        from: `${settings.fromName} <${settings.fromEmail}>`,
-        replyTo: settings.replyTo,
-        subject: campaign.subject,
-        html,
-        headers: unsubscribeHeaders(subscriber.id),
-      });
-      await db.insert(sends).values({
-        campaignId,
-        subscriberId: subscriber.id,
-        status: "sent",
-        providerMessageId: result?.id,
-        sentAt: new Date(),
-      });
-      sent++;
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Send failed.";
-      // Failed sends aren't retried automatically on the next batch — an existing
-      // "failed" row for this subscriber+campaign would otherwise be invisible to the
-      // unsent filter above (only "sent"/"delivered" count as completed), so this
-      // subscriber is naturally retried next batch. Overwrite any prior failed row
-      // to avoid duplicate log entries across retries.
-      const [priorFailure] = await db
-        .select()
-        .from(sends)
-        .where(and(eq(sends.campaignId, campaignId), eq(sends.subscriberId, subscriber.id)));
-      if (priorFailure) {
-        await db.update(sends).set({ status: "failed", error: message }).where(eq(sends.id, priorFailure.id));
-      } else {
-        await db.insert(sends).values({ campaignId, subscriberId: subscriber.id, status: "failed", error: message });
-      }
-      failed++;
+  for (let i = 0; i < batch.length; i += SEND_CONCURRENCY) {
+    const chunk = batch.slice(i, i + SEND_CONCURRENCY);
+    const outcomes = await Promise.all(chunk.map((subscriber) => sendToOne(campaignId, campaign, subscriber, settings)));
+    for (const outcome of outcomes) {
+      if (outcome === "sent") sent++;
+      else failed++;
     }
   }
 
