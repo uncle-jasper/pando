@@ -4,6 +4,7 @@ import {
   timestamp,
   uuid,
   pgEnum,
+  integer,
 } from "drizzle-orm/pg-core";
 
 export const subscriberStatus = pgEnum("subscriber_status", [
@@ -84,5 +85,6 @@ export const images = pgTable("images", {
   id: uuid("id").primaryKey().defaultRandom(),
   url: text("url").notNull(),
   alt: text("alt"),
+  size: integer("size").notNull().default(0),
   uploadedAt: timestamp("uploaded_at", { withTimezone: true }).notNull().defaultNow(),
 });

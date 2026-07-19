@@ -178,7 +178,14 @@ export function parseMarkdown(md: string): string {
   return html;
 }
 
+// Prefers the first markdown heading (any level); falls back to the first non-empty line
+// (stripped of stray #'s) so a title always tracks the draft's actual content, matching
+// tree's own sendToWordPress title-derivation behavior.
 export function deriveTitle(markdown: string): string {
-  const h1 = markdown.match(/^#\s+(.+)$/m);
-  return h1 ? h1[1].trim() : "";
+  for (const line of markdown.split("\n")) {
+    const heading = line.match(/^#{1,6}\s+(.+)$/);
+    if (heading) return heading[1].trim();
+    if (line.trim()) return line.trim().replace(/^#+\s*/, "");
+  }
+  return "";
 }

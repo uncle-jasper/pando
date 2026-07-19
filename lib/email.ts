@@ -37,11 +37,21 @@ function appUrl(): string {
 // style="..." for broad client support, while this @media block survives inlining
 // in a retained <style> tag for clients that honor prefers-color-scheme (Apple Mail,
 // Outlook.com, etc) — !important is required there since it must beat the inlined style.
-function emailCss(settings: SettingsLike): string {
+// `theme` only ever affects the in-app preview (see app/api/admin/campaigns/[id]/preview).
+// Real sends always use the default "light" mode: light colors inlined as the base (so
+// every client shows something sane), plus the @media block below as a conditional
+// enhancement for clients that honor prefers-color-scheme. Forcing theme="dark" skips the
+// media query and inlines the dark palette directly, so you can see exactly what a
+// dark-mode inbox would render without changing your own OS/browser setting.
+function emailCss(settings: SettingsLike, theme: "light" | "dark" = "light"): string {
+  const bg = theme === "dark" ? settings.darkBg : settings.lightBg;
+  const text = theme === "dark" ? settings.darkText : settings.lightText;
+  const muted = theme === "dark" ? settings.darkMuted : settings.lightMuted;
+
   return `
-  body { margin:0; padding:0; background:${settings.lightBg}; font-family:${settings.fontFamily}; color:${settings.lightText}; }
-  .email-wrapper { width:100%; background:${settings.lightBg}; padding: 24px 0; }
-  .email-container { max-width:600px; margin:0 auto; background:${settings.lightBg}; }
+  body { margin:0; padding:0; background:${bg}; font-family:${settings.fontFamily}; color:${text}; }
+  .email-wrapper { width:100%; background:${bg}; padding: 24px 0; }
+  .email-container { max-width:600px; margin:0 auto; background:${bg}; }
   .hero-img { width:100%; height:auto; display:block; border:0; }
   .email-content { padding: 24px 32px; }
   .email-h1 { font-size:28px; font-weight:700; margin:0 0 12px; line-height:1.3; }
@@ -49,21 +59,23 @@ function emailCss(settings: SettingsLike): string {
   .email-h3, .email-h4, .email-h5, .email-h6 { font-size:18px; font-weight:700; margin:16px 0 8px; }
   .email-p { font-size:16px; line-height:1.6; margin:0 0 14px; }
   .email-list { font-size:16px; line-height:1.6; margin:0 0 14px; padding-left:24px; }
-  .email-blockquote { border-left:3px solid ${settings.lightMuted}; padding:4px 0 4px 16px; color:${settings.lightMuted}; font-style:italic; margin:0 0 14px; }
-  .email-pre { background:${settings.lightMuted}22; padding:12px 16px; border-radius:6px; overflow-x:auto; margin:0 0 14px; font-family: 'Courier New', monospace; font-size:14px; }
-  .email-hr { border:none; border-top:1px solid ${settings.lightMuted}55; margin:20px 0; }
-  .email-link { color:${settings.lightText}; text-decoration:underline; }
+  .email-blockquote { border-left:3px solid ${muted}; padding:4px 0 4px 16px; color:${muted}; font-style:italic; margin:0 0 14px; }
+  .email-pre { background:${muted}22; padding:12px 16px; border-radius:6px; overflow-x:auto; margin:0 0 14px; font-family: 'Courier New', monospace; font-size:14px; }
+  .email-hr { border:none; border-top:1px solid ${muted}55; margin:20px 0; }
+  .email-link { color:${text}; text-decoration:underline; }
   .email-img { max-width:100%; display:block; border:0; margin: 10px 0; }
   .gallery-table { margin: 10px 0; }
   .gallery-cell { padding:4px; vertical-align:top; }
   .gallery-img { width:100%; height:auto; display:block; border:0; border-radius:4px; }
-  .gallery-caption { font-size:12px; color:${settings.lightMuted}; margin-top:4px; }
-  .email-footnotes { border-top:1px solid ${settings.lightMuted}55; margin-top:20px; padding-top:12px; }
-  .email-footnote { font-size:13px; color:${settings.lightMuted}; margin:0 0 6px; }
+  .gallery-caption { font-size:12px; color:${muted}; margin-top:4px; }
+  .email-footnotes { border-top:1px solid ${muted}55; margin-top:20px; padding-top:12px; }
+  .email-footnote { font-size:13px; color:${muted}; margin:0 0 6px; }
   .preheader { display:none !important; visibility:hidden; opacity:0; height:0; width:0; overflow:hidden; mso-hide:all; }
-  .email-footer { padding: 20px 32px; font-size:12px; color:${settings.lightMuted}; text-align:center; }
-  .email-footer a { color:${settings.lightMuted}; }
-
+  .email-footer { padding: 20px 32px; font-size:12px; color:${muted}; text-align:center; }
+  .email-footer a { color:${muted}; }
+${
+  theme === "light"
+    ? `
   @media (prefers-color-scheme: dark) {
     body, .email-wrapper, .email-container { background:${settings.darkBg} !important; }
     body, .email-content, .email-h1, .email-h2, .email-h3, .email-h4, .email-h5, .email-h6, .email-p, .email-list, .email-link {
@@ -72,14 +84,17 @@ function emailCss(settings: SettingsLike): string {
     .email-blockquote { color:${settings.darkMuted} !important; border-left-color:${settings.darkMuted} !important; }
     .email-footer, .email-footer a, .email-footnote, .gallery-caption { color:${settings.darkMuted} !important; }
     .email-pre { background:${settings.darkMuted}33 !important; }
-  }
+  }`
+    : ""
+}
 `;
 }
 
 export function renderEmailHtml(
   campaign: CampaignLike,
   subscriber: SubscriberLike | null,
-  settings: SettingsLike
+  settings: SettingsLike,
+  theme: "light" | "dark" = "light"
 ): string {
   const viewInBrowserUrl = `${appUrl()}/p/${campaign.id}`;
 
@@ -106,7 +121,7 @@ export function renderEmailHtml(
 <meta name="color-scheme" content="light dark">
 <meta name="supported-color-schemes" content="light dark">
 <title>${campaign.subject}</title>
-<style>${emailCss(settings)}</style>
+<style>${emailCss(settings, theme)}</style>
 </head>
 <body>
 <div class="preheader">${campaign.preheader || ""}</div>

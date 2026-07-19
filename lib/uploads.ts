@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 const ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
 const MAX_BYTES = 8 * 1024 * 1024;
 
-export async function uploadImage(file: File): Promise<{ url: string }> {
+export async function uploadImage(file: File): Promise<{ url: string; size: number }> {
   if (!ALLOWED_TYPES.has(file.type)) {
     throw new Error("Unsupported image type. Use PNG, JPEG, GIF, or WebP.");
   }
@@ -20,5 +20,5 @@ export async function uploadImage(file: File): Promise<{ url: string }> {
     contentType: file.type,
   });
 
-  return { url: blob.url };
+  return { url: blob.url, size: file.size };
 }

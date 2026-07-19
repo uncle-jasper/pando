@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { resizeImageFile } from "@/lib/client-image-resize";
 
 interface GalleryUploadButtonProps {
   onUploaded: (urls: string[]) => void;
@@ -19,15 +20,20 @@ export default function GalleryUploadButton({ onUploaded }: GalleryUploadButtonP
 
     const urls: string[] = [];
     for (const file of files) {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/admin/uploads", { method: "POST", body: formData });
-      if (res.ok) {
-        const row = await res.json();
-        urls.push(row.url);
-      } else {
-        const body = await res.json().catch(() => ({}));
-        setError(body.error || "Upload failed.");
+      try {
+        const resized = await resizeImageFile(file);
+        const formData = new FormData();
+        formData.append("file", resized);
+        const res = await fetch("/api/admin/uploads", { method: "POST", body: formData });
+        if (res.ok) {
+          const row = await res.json();
+          urls.push(row.url);
+        } else {
+          const body = await res.json().catch(() => ({}));
+          setError(body.error || "Upload failed.");
+        }
+      } catch {
+        setError("One or more images failed to upload. Try a smaller image or a different format.");
       }
     }
 

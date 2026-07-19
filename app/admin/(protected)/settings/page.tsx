@@ -72,7 +72,7 @@ export default function SettingsPage() {
   const muted = previewDark ? settings.darkMuted : settings.lightMuted;
 
   return (
-    <div className="p-6 flex gap-10 flex-wrap">
+    <div className="p-6 flex-1 overflow-auto flex gap-10 flex-wrap">
       <form onSubmit={handleSave} className="flex flex-col gap-3 max-w-lg">
         <h1 className="text-lg font-semibold mb-1">Settings</h1>
         <p className="text-sm text-[var(--muted)] mb-3">

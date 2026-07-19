@@ -8,6 +8,7 @@ import ImageUploadButton from "@/components/ImageUploadButton";
 import GalleryUploadButton from "@/components/GalleryUploadButton";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import StatusLine from "@/components/StatusLine";
+import EmailPreviewModal from "@/components/EmailPreviewModal";
 
 interface Campaign {
   id: string;
@@ -33,6 +34,7 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
   const [confirmSendOpen, setConfirmSendOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [sendStatus, setSendStatus] = useState<{ message: string; tone: "info" | "error" | "success" } | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
   const editorRef = useRef<EditorHandle>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loaded = useRef(false);
@@ -96,6 +98,21 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
   function handleGalleryInsert(urls: string[]) {
     const block = `\n:::gallery\n${urls.map((u) => `![](${u})`).join("\n")}\n:::\n`;
     editorRef.current?.insertAtCursor(block);
+  }
+
+  async function handleOpenPreview() {
+    // The preview route reads from the database, not in-memory state — flush any pending
+    // debounced autosave first so the preview always reflects what's currently on screen.
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      await fetch(`/api/admin/campaigns/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markdownBody: markdown, subject, heroImageUrl: heroImageUrl || null }),
+      });
+      setSaveState("saved");
+    }
+    setShowPreview(true);
   }
 
   async function handleSendTest() {
@@ -191,6 +208,9 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
         </button>
         <ImageUploadButton label="Insert image" onUploaded={handleImageInsert} />
         <GalleryUploadButton onUploaded={handleGalleryInsert} />
+        <button onClick={handleOpenPreview} className="px-2 py-1 text-sm border border-[var(--border)] rounded">
+          Preview email
+        </button>
 
         <span className="flex-1" />
 
@@ -231,6 +251,8 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
         onConfirm={handleSendCampaign}
         onCancel={() => setConfirmSendOpen(false)}
       />
+
+      {showPreview && <EmailPreviewModal campaignId={id} onClose={() => setShowPreview(false)} />}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { resizeImageFile } from "@/lib/client-image-resize";
 
 interface ImageUploadButtonProps {
   label: string;
@@ -19,19 +20,24 @@ export default function ImageUploadButton({ label, onUploaded, className }: Imag
     setUploading(true);
     setError(null);
 
-    const formData = new FormData();
-    formData.append("file", file);
+    try {
+      const resized = await resizeImageFile(file);
+      const formData = new FormData();
+      formData.append("file", resized);
 
-    const res = await fetch("/api/admin/uploads", { method: "POST", body: formData });
-    setUploading(false);
-    if (inputRef.current) inputRef.current.value = "";
-
-    if (res.ok) {
-      const row = await res.json();
-      onUploaded(row.url);
-    } else {
-      const body = await res.json().catch(() => ({}));
-      setError(body.error || "Upload failed.");
+      const res = await fetch("/api/admin/uploads", { method: "POST", body: formData });
+      if (res.ok) {
+        const row = await res.json();
+        onUploaded(row.url);
+      } else {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error || "Upload failed.");
+      }
+    } catch {
+      setError("Upload failed. Try a smaller image or a different format.");
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
     }
   }
 

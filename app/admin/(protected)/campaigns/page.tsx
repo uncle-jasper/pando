@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 interface Campaign {
   id: string;
@@ -15,15 +16,20 @@ export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<Campaign | null>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    fetch("/api/admin/campaigns")
+  function refresh() {
+    return fetch("/api/admin/campaigns")
       .then((r) => r.json())
       .then((rows) => {
         setCampaigns(rows);
         setLoading(false);
       });
+  }
+
+  useEffect(() => {
+    refresh();
   }, []);
 
   async function createDraft() {
@@ -31,6 +37,13 @@ export default function CampaignsPage() {
     const res = await fetch("/api/admin/campaigns", { method: "POST", body: JSON.stringify({}) });
     const row = await res.json();
     router.push(`/admin/campaigns/${row.id}`);
+  }
+
+  async function handleDelete() {
+    if (!pendingDelete) return;
+    await fetch(`/api/admin/campaigns/${pendingDelete.id}`, { method: "DELETE" });
+    setPendingDelete(null);
+    refresh();
   }
 
   return (
@@ -57,23 +70,47 @@ export default function CampaignsPage() {
               <th className="py-2">Title</th>
               <th className="py-2">Status</th>
               <th className="py-2">Updated</th>
+              <th className="py-2"></th>
             </tr>
           </thead>
           <tbody>
             {campaigns.map((c) => (
-              <tr
-                key={c.id}
-                className="border-b border-[var(--border)] cursor-pointer hover:bg-[var(--surface)]"
-                onClick={() => router.push(`/admin/campaigns/${c.id}`)}
-              >
-                <td className="py-2">{c.title || "(untitled)"}</td>
-                <td className="py-2">{c.status}</td>
-                <td className="py-2">{new Date(c.updatedAt).toLocaleString()}</td>
+              <tr key={c.id} className="border-b border-[var(--border)] hover:bg-[var(--surface)]">
+                <td className="py-2 cursor-pointer" onClick={() => router.push(`/admin/campaigns/${c.id}`)}>
+                  {c.title || "(untitled)"}
+                </td>
+                <td className="py-2 cursor-pointer" onClick={() => router.push(`/admin/campaigns/${c.id}`)}>
+                  {c.status}
+                </td>
+                <td className="py-2 cursor-pointer" onClick={() => router.push(`/admin/campaigns/${c.id}`)}>
+                  {new Date(c.updatedAt).toLocaleString()}
+                </td>
+                <td className="py-2 text-right">
+                  {c.status === "draft" && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPendingDelete(c);
+                      }}
+                      className="text-[var(--muted)] hover:text-red-500"
+                    >
+                      Delete
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
+
+      <ConfirmDialog
+        open={!!pendingDelete}
+        message={`Delete "${pendingDelete?.title || "(untitled)"}"? This can't be undone.`}
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

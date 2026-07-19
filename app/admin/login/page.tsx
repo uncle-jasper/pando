@@ -31,7 +31,10 @@ export default function LoginPage() {
   return (
     <div className="flex-1 flex items-center justify-center">
       <form onSubmit={handleSubmit} className="w-full max-w-sm p-6 border border-[var(--border)] rounded-lg">
-        <h1 className="text-lg font-semibold mb-4">Pando</h1>
+        <div className="flex items-center gap-2 mb-4">
+          <img src="/aspen.png" alt="" className="h-7 w-7" />
+          <h1 className="text-lg font-semibold">Pando</h1>
+        </div>
         <label className="block text-sm mb-1 text-[var(--muted)]">Password</label>
         <input
           type="password"
