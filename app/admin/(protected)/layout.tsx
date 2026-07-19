@@ -1,5 +1,6 @@
 import Link from "next/link";
 import LogoutButton from "@/components/LogoutButton";
+import ThemeToggle from "@/components/ThemeToggle";
 import Footer from "@/components/Footer";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -16,6 +17,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <Link href="/admin/images">Images</Link>
         <Link href="/admin/settings">Settings</Link>
         <span className="flex-1" />
+        <ThemeToggle />
         <LogoutButton />
       </nav>
       <div className="flex-1 min-h-0 flex flex-col">{children}</div>
