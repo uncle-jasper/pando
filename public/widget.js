@@ -10,8 +10,22 @@
   if (!script) return;
   var origin = new URL(script.src).origin;
 
+  // Host pages (like danbenson.me) may store their own light/dark choice rather than
+  // purely following the OS-level prefers-color-scheme — e.g. danbenson.me keeps a
+  // manual override in localStorage under "db-theme" that wins over the OS setting.
+  // Falling back to prefers-color-scheme (via a "pando-theme-dark" class either way)
+  // keeps this correct for embeds on other sites that don't set that key.
+  var stored = null;
+  try { stored = localStorage.getItem("db-theme"); } catch (e) {}
+  var theme =
+    stored === "dark" || stored === "light"
+      ? stored
+      : window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+
   var container = document.createElement("div");
-  container.className = "pando-signup-widget";
+  container.className = "pando-signup-widget pando-theme-" + theme;
   container.innerHTML =
     '<form class="pando-signup-form">' +
     '<input class="pando-signup-email" type="email" name="email" placeholder="you@example.com" required>' +

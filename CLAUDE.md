@@ -131,10 +131,24 @@ genuinely necessary, and flag it clearly when that point arrives rather than ass
 - **Settings → Reply-To is empty.** Recommend setting it to a real inbox Dan checks (e.g. his
   Gmail), since the From address doesn't need to be a real mailbox but replies need somewhere to
   go.
-- **WordPress signup widget** (`public/widget.js` + `/api/embed/subscribe`) is built and CORS-
-  restricted to danbenson.me, but not yet embedded on the actual WordPress site.
 - Physical mailing address in Settings has been filled in by Dan already ("Taipei, Taiwan") —
   don't overwrite it.
+- **Newsletter page exists on danbenson.me** (`/newsletter`, page ID 399) as a **Draft** — not
+  published yet, only visible via the logged-in preview link. Has intro copy + the widget
+  embedded via a Custom HTML block, styled to match the site's Contact page (Jetpack form:
+  `Inconsolata` font, black border/button in light mode, white border/button in dark mode —
+  see the widget theme gotcha below). Publish it from wp-admin when Dan's ready; don't do it
+  without being asked.
+- **`widget.js`'s light/dark detection matches `danbenson.me`'s own toggle, not just OS
+  preference.** The site stores its manual light/dark choice in `localStorage["db-theme"]`
+  (`"light"` or `"dark"`), which overrides the OS-level `prefers-color-scheme` — so a visitor
+  whose OS is dark but who has toggled the site to light (or vice versa) sees the site's stored
+  choice, not their OS setting. `widget.js` reads that same key on load and applies a
+  `pando-theme-light` / `pando-theme-dark` class to its container (falling back to
+  `prefers-color-scheme` only when the key isn't set, e.g. widget embedded on a different site).
+  Style hooks on host pages should target `.pando-theme-dark .pando-signup-email` etc., **not**
+  a `@media (prefers-color-scheme: dark)` block — that was the original approach and it drifted
+  out of sync with the real site state, which is how this got found in the first place.
 
 ## Next up: newsletter page on danbenson.me
 
