@@ -64,12 +64,47 @@ campaign drafts, real subscribers, real uploaded images). Be careful:
 - **`deriveTitle()`** (`lib/markdown/parse.ts`) matches any heading level, falling back to the
   first non-empty line. It used to only match H1, which froze campaign titles as stale text
   whenever someone's first heading was H2+ (a real bug that shipped and got fixed).
+- **Client-side image resize keeps PNG only when the image actually has real transparency**
+  (`hasRealTransparency()` in `lib/client-image-resize.ts` does a pixel-alpha scan). Early version
+  kept PNG format for any `.png` file regardless of content, which compressed poorly for photo-like
+  PNGs. GIFs are passed through untouched to preserve animation.
+- **A `drizzle-kit push` scare turned out to be nothing.** Mid-session, `/admin/campaigns` briefly
+  showed empty and a DB check showed campaigns/subscribers/images all at 0 rows. Looked like schema
+  push data loss. Turned out Dan had manually deleted the campaign and photos himself moments
+  earlier while testing ("cleaning things up") — unrelated to the schema changes. No data was
+  actually lost and no recovery was needed. Documented in case it looks alarming again: check with
+  Dan before assuming a `drizzle-kit push` (even a purely additive one) wiped data — it's more
+  likely explained by direct user action, since he was actively testing in the same window.
 
 ## User's standing preference: stay free as long as possible
 
 Explicit instruction: optimize every decision toward staying on free tiers (Vercel Hobby, Neon
 free, Resend free, Vercel Blob free) for as long as sustainable. Only reach for a paid tier when
 genuinely necessary, and flag it clearly when that point arrives rather than assuming it's fine.
+
+## Features built since initial launch
+
+- **Campaign templates.** Dedicated editor at `/admin/templates` (separate from campaigns, per
+  Dan's explicit choice — not a "flag a campaign as a template" approach). `templates` table
+  in `lib/schema.ts` (name, markdownBody, heroImageUrl, heroImageAlt). The campaigns list page's
+  "New draft" button is now a dropdown: "Blank draft" or "From template: [name]" — the latter
+  posts `{ templateId }` to `POST /api/admin/campaigns`, which clones the template's body/hero
+  image into a new campaign row. Editing a template never affects campaigns already created from
+  it (one-time copy, not a live link).
+- **Email preview modal.** "Preview email" button on the campaign editor opens a modal
+  (`components/EmailPreviewModal.tsx`) with an iframe rendering the *actual* send-time HTML via
+  `GET /api/admin/campaigns/[id]/preview?theme=light|dark` (works for any campaign status, unlike
+  the public `/p/[id]` route which requires `sent`). Light/dark toggle buttons let Dan check both
+  themes without needing to actually switch his OS/browser theme. Opening the modal first flushes
+  any pending debounced autosave so the preview always reflects the latest edits.
+- **Images admin page** (`/admin/images`) — grid of every uploaded image with size/date, Copy URL
+  and Delete buttons, and a live storage-usage bar against the 1GB Vercel Blob free tier. Delete
+  calls Blob's `del()` to actually remove the file, not just the DB row.
+- **Delete drafts** — campaigns list page has a delete action with a confirm dialog.
+- **Footer** — every Pando page (`admin/(protected)/layout.tsx`, `admin/login`, `/subscribe`)
+  now renders `components/Footer.tsx`: a minimal "2026 · Dan Benson" line.
+- **Aspen icon** — `public/aspen.png` used as the favicon (`app/icon.png`) and shown next to the
+  "Pando" wordmark on the login screen and admin nav bar.
 
 ## Known outstanding work (not yet done)
 
@@ -81,13 +116,24 @@ genuinely necessary, and flag it clearly when that point arrives rather than ass
   go.
 - **WordPress signup widget** (`public/widget.js` + `/api/embed/subscribe`) is built and CORS-
   restricted to danbenson.me, but not yet embedded on the actual WordPress site.
-- **Newsletter archive** — explicitly scoped as a fast-follow in the original plan. Not started.
-  Intended to be WordPress-native (server-rendered PHP, not a Pando page) for SEO reasons — see
-  plan history for the reasoning if you pick this up.
-- **Campaign templates** — Dan asked for the ability to create a reusable template and apply it
-  across multiple campaigns. Not yet designed or built.
 - Physical mailing address in Settings has been filled in by Dan already ("Taipei, Taiwan") —
   don't overwrite it.
+
+## Next up: newsletter page on danbenson.me
+
+The next planned piece of work (not started) is the **newsletter section on danbenson.me itself**
+(WordPress), per the original plan's phased rollout:
+
+1. Start simple: a `danbenson.me/newsletter` page with "coming soon" copy and just the signup
+   widget (`public/widget.js` embedded via a WordPress Custom HTML block — no theme/plugin changes
+   needed, see "WordPress signup widget" above).
+2. Once the first real issue has been sent, that same page grows an **archive** of past issues
+   below the signup form. Per the original plan, build this as a server-rendered WordPress
+   template/plugin (PHP) that queries a new public, read-only Pando API (`status = 'sent'`
+   campaigns only, never drafts) — not a client-side JS widget — so archived issues are real
+   server-rendered HTML for SEO/link-preview purposes, inheriting the site's theme CSS natively.
+   Pando's own `/p/[campaignId]` view-in-browser page stays the link used *inside* sent emails,
+   but the WordPress archive page becomes the canonical indexed copy.
 
 ## Useful entry points
 
@@ -98,3 +144,7 @@ genuinely necessary, and flag it clearly when that point arrives rather than ass
 - `/admin/campaigns/[id]` — the compose UI; has a "Preview email" button that shows the *actual*
   send-time HTML (not the approximate live-typing preview) with a light/dark toggle
 - `app/api/cron/send-batches/route.ts` — protected by `CRON_SECRET`, called daily by Vercel Cron
+- `lib/client-image-resize.ts` — client-side canvas resize/compress before every upload, to stay
+  under Vercel's ~4.5MB serverless body limit and keep Blob usage sustainable
+- `/admin/images` — image library management, storage usage bar
+- `/admin/templates` — reusable campaign templates, separate editor from campaigns

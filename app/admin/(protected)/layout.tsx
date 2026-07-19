@@ -1,5 +1,6 @@
 import Link from "next/link";
 import LogoutButton from "@/components/LogoutButton";
+import Footer from "@/components/Footer";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -10,6 +11,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           Pando
         </span>
         <Link href="/admin/campaigns">Campaigns</Link>
+        <Link href="/admin/templates">Templates</Link>
         <Link href="/admin/subscribers">Subscribers</Link>
         <Link href="/admin/images">Images</Link>
         <Link href="/admin/settings">Settings</Link>
@@ -17,6 +19,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <LogoutButton />
       </nav>
       <div className="flex-1 min-h-0 flex flex-col">{children}</div>
+      <Footer />
     </div>
   );
 }

@@ -88,3 +88,17 @@ export const images = pgTable("images", {
   size: integer("size").notNull().default(0),
   uploadedAt: timestamp("uploaded_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// Reusable starting points for new campaigns, authored separately (not tied to any
+// real campaign). Creating a campaign "from a template" copies these fields into a new
+// campaign row — there's no live link back, so editing a template never affects
+// campaigns already created from it.
+export const templates = pgTable("templates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull().default(""),
+  markdownBody: text("markdown_body").notNull().default(""),
+  heroImageUrl: text("hero_image_url"),
+  heroImageAlt: text("hero_image_alt"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
