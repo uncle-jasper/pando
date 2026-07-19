@@ -62,8 +62,21 @@ campaign drafts, real subscribers, real uploaded images). Be careful:
   campaign still in `sending` status the next day. If Dan ever upgrades Resend, just raise
   `SEND_BATCH_SIZE` in that file — no architecture change needed.
 - **`deriveTitle()`** (`lib/markdown/parse.ts`) matches any heading level, falling back to the
-  first non-empty line. It used to only match H1, which froze campaign titles as stale text
-  whenever someone's first heading was H2+ (a real bug that shipped and got fixed).
+  first non-empty line (skipping `-# ` metadata lines and `---` rules — see the markdown-syntax
+  section above). It's now only used as a one-time default when a campaign is created from a
+  template — the campaign editor has its own explicit Title field
+  (`app/admin/(protected)/campaigns/[id]/page.tsx`) that Dan controls directly. It used to
+  re-derive the title from the body on every autosave, which both froze titles as stale text when
+  the parsing didn't match (a real bug that shipped and got fixed) and, more fundamentally,
+  overrode any custom title Dan tried to set — removed entirely once he asked for that freedom.
+- **The campaign editor's debounced autosave merges pending fields instead of replacing them**
+  (`pendingPatch` ref in the same file). Each field (title, subject, markdown body, hero image)
+  used to call `scheduleSave()` with just its own patch, and each call cancelled and replaced
+  whatever the previous call's timer would have sent — so editing two fields within the 800ms
+  debounce window silently dropped the first one, even though the UI showed "saved". Found this
+  by testing the new Title field: typing a title then quickly editing the body lost the title
+  every time. Any future save-triggering field must go through `scheduleSave()`, not a separate
+  fetch, or it'll reintroduce this bug.
 - **Client-side image resize keeps PNG only when the image actually has real transparency**
   (`hasRealTransparency()` in `lib/client-image-resize.ts` does a pixel-alpha scan). Early version
   kept PNG format for any `.png` file regardless of content, which compressed poorly for photo-like

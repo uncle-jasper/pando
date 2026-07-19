@@ -25,6 +25,7 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
   const router = useRouter();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [markdown, setMarkdown] = useState("");
+  const [title, setTitle] = useState("");
   const [subject, setSubject] = useState("");
   const [heroImageUrl, setHeroImageUrl] = useState("");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
@@ -37,6 +38,10 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
   const [showPreview, setShowPreview] = useState(false);
   const editorRef = useRef<EditorHandle>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Accumulates fields across calls so editing e.g. the title and then quickly the body
+  // (each on its own scheduleSave call) doesn't cancel and drop the earlier field's save —
+  // every pending field goes out together on whichever call's timer fires next.
+  const pendingPatch = useRef<Record<string, unknown>>({});
   const loaded = useRef(false);
 
   useEffect(() => {
@@ -45,6 +50,7 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
       .then((row: Campaign) => {
         setCampaign(row);
         setMarkdown(row.markdownBody);
+        setTitle(row.title);
         setSubject(row.subject);
         setHeroImageUrl(row.heroImageUrl || "");
         loaded.current = true;
@@ -57,13 +63,16 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
   }, [id]);
 
   function scheduleSave(patch: Record<string, unknown>) {
+    Object.assign(pendingPatch.current, patch);
     setSaveState("saving");
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
+      const toSend = pendingPatch.current;
+      pendingPatch.current = {};
       await fetch(`/api/admin/campaigns/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(patch),
+        body: JSON.stringify(toSend),
       });
       setSaveState("saved");
     }, 800);
@@ -79,6 +88,12 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
     setSubject(text);
     if (!loaded.current) return;
     scheduleSave({ subject: text });
+  }
+
+  function handleTitleChange(text: string) {
+    setTitle(text);
+    if (!loaded.current) return;
+    scheduleSave({ title: text });
   }
 
   function handleHeroUploaded(url: string) {
@@ -105,10 +120,12 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
     // debounced autosave first so the preview always reflects what's currently on screen.
     if (saveTimer.current) {
       clearTimeout(saveTimer.current);
+      const toSend = pendingPatch.current;
+      pendingPatch.current = {};
       await fetch(`/api/admin/campaigns/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ markdownBody: markdown, subject, heroImageUrl: heroImageUrl || null }),
+        body: JSON.stringify(toSend),
       });
       setSaveState("saved");
     }
@@ -167,6 +184,12 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
   return (
     <div className="flex-1 flex flex-col min-h-0">
       <div className="p-2 border-b border-[var(--border)] flex gap-2 items-center">
+        <input
+          value={title}
+          onChange={(e) => handleTitleChange(e.target.value)}
+          placeholder="Title (for your drafts list only)"
+          className="flex-1 px-2 py-1 text-sm border border-[var(--border)] rounded bg-transparent"
+        />
         <input
           value={subject}
           onChange={(e) => handleSubjectChange(e.target.value)}

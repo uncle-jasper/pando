@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { campaigns } from "@/lib/schema";
-import { deriveTitle } from "@/lib/markdown/parse";
 import { extractImageUrls, deleteOrphanedImages } from "@/lib/imageCleanup";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -23,10 +22,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const body = await req.json().catch(() => ({}));
   const update: Partial<typeof campaigns.$inferInsert> = { updatedAt: new Date() };
 
-  if (typeof body.markdownBody === "string") {
-    update.markdownBody = body.markdownBody;
-    update.title = deriveTitle(body.markdownBody) || existing.title;
-  }
+  if (typeof body.markdownBody === "string") update.markdownBody = body.markdownBody;
+  if (typeof body.title === "string") update.title = body.title;
   if (typeof body.subject === "string") update.subject = body.subject;
   if (typeof body.preheader === "string") update.preheader = body.preheader;
   if (typeof body.heroImageUrl === "string" || body.heroImageUrl === null) update.heroImageUrl = body.heroImageUrl;
