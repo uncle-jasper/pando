@@ -119,6 +119,15 @@ export function parseMarkdown(md: string): string {
       continue;
     }
 
+    // Pando addition (not in tree): "-# " prefix for a small, muted metadata line —
+    // e.g. an issue number/date line at the top of a newsletter. Distinct from ">"
+    // blockquotes, which render with a border and italics (a pull-quote look, not this).
+    if (line.startsWith("-# ")) {
+      html += `<p class="meta-text" data-source-line="${lineNum}">${parseInline(line.slice(3))}</p>\n`;
+      i++;
+      continue;
+    }
+
     if (/^[-*+] /.test(line) || /^\d+\. /.test(line)) {
       const listStart = lineNum;
       const isOrdered = /^\d+\. /.test(line);
@@ -151,6 +160,7 @@ export function parseMarkdown(md: string): string {
       if (/^#{1,6} /.test(l)) break;
       if (l.startsWith("```")) break;
       if (l.startsWith("> ")) break;
+      if (l.startsWith("-# ")) break;
       if (/^[-*] /.test(l) || /^\d+\. /.test(l)) break;
       if (/^---+$/.test(l)) break;
       if (/^\[\^[^\]]+\]:/.test(l)) break;

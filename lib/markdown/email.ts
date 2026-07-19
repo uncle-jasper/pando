@@ -139,6 +139,14 @@ export function renderEmailBody(md: string): string {
       continue;
     }
 
+    // Pando addition (not in tree): "-# " prefix for a small, muted metadata line — see
+    // lib/markdown/parse.ts for the matching browser-preview behavior.
+    if (line.startsWith("-# ")) {
+      html += `<p class="email-meta">${parseInlineEmail(line.slice(3))}</p>\n`;
+      i++;
+      continue;
+    }
+
     if (/^[-*+] /.test(line) || /^\d+\. /.test(line)) {
       const isOrdered = /^\d+\. /.test(line);
       const tag = isOrdered ? "ol" : "ul";
@@ -169,6 +177,7 @@ export function renderEmailBody(md: string): string {
       if (/^#{1,6} /.test(l)) break;
       if (l.startsWith("```")) break;
       if (l.startsWith("> ")) break;
+      if (l.startsWith("-# ")) break;
       if (/^[-*] /.test(l) || /^\d+\. /.test(l)) break;
       if (/^---+$/.test(l)) break;
       if (/^\[\^[^\]]+\]:/.test(l)) break;

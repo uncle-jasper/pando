@@ -57,6 +57,7 @@ body {
 .pando-preview ol { list-style-type: decimal; }
 .pando-preview li { margin: 0.2em 0; padding-left: 0.3em; }
 .pando-preview blockquote { border-left: 3px solid var(--accent); padding: 4px 0 4px 16px; color: var(--muted); font-style: italic; margin: 0.8em 0; }
+.pando-preview .meta-text { font-size: 0.8em; color: var(--muted); margin: 0 0 0.6em; }
 .pando-preview code { font-family: ui-monospace, monospace; font-size: 0.88em; background: var(--surface); padding: 1px 5px; border-radius: 3px; }
 .pando-preview pre { background: var(--surface); padding: 14px 18px; border-radius: 6px; overflow-x: auto; margin: 0.8em 0; }
 .pando-preview pre code { background: none; padding: 0; }

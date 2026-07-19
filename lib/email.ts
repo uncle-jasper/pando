@@ -63,6 +63,7 @@ function emailCss(settings: SettingsLike, theme: "light" | "dark" = "light", for
   .email-p { font-size:16px; line-height:1.6; margin:0 0 14px; }
   .email-list { font-size:16px; line-height:1.6; margin:0 0 14px; padding-left:24px; }
   .email-blockquote { border-left:3px solid ${muted}; padding:4px 0 4px 16px; color:${muted}; font-style:italic; margin:0 0 14px; }
+  .email-meta { font-size:12px; color:${muted}; margin:0 0 14px; }
   .email-pre { background:${muted}22; padding:12px 16px; border-radius:6px; overflow-x:auto; margin:0 0 14px; font-family: 'Courier New', monospace; font-size:14px; }
   .email-hr { border:none; border-top:1px solid ${muted}55; margin:20px 0; }
   .email-link { color:${text}; text-decoration:underline; }
@@ -85,7 +86,7 @@ ${
       color:${settings.darkText} !important;
     }
     .email-blockquote { color:${settings.darkMuted} !important; border-left-color:${settings.darkMuted} !important; }
-    .email-footer, .email-footer a, .email-footnote, .gallery-caption { color:${settings.darkMuted} !important; }
+    .email-footer, .email-footer a, .email-footnote, .gallery-caption, .email-meta { color:${settings.darkMuted} !important; }
     .email-pre { background:${settings.darkMuted}33 !important; }
   }`
     : ""
