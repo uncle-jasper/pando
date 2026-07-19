@@ -46,7 +46,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
     const CM6 = window.CM6;
     const {
-      EditorView, keymap, highlightActiveLine, drawSelection, dropCursor,
+      EditorView, keymap, drawSelection, dropCursor,
       rectangularSelection, crosshairCursor, highlightSpecialChars, placeholder: cmPlaceholder,
     } = CM6;
     const { EditorState, EditorSelection } = CM6;
@@ -111,7 +111,6 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       EditorState.allowMultipleSelections.of(true),
       rectangularSelection(),
       crosshairCursor(),
-      highlightActiveLine(),
       highlightSpecialChars(),
       markdown({ base: markdownLanguage }),
       syntaxHighlighting(defaultHighlightStyle),
