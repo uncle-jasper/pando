@@ -11,6 +11,24 @@ export function stripAnnotations(text: string): string {
   return text.replace(/%\{[^}]*\}/g, "");
 }
 
+// Pando addition (not in tree): a line ending in "\" forces a line break within a
+// paragraph, without the blank-line gap a new paragraph would add. Uses a placeholder
+// (safe from escapeHtml and every other parseInline regex) so it survives being parsed
+// as part of the paragraph's text, then becomes a real <br> afterward.
+const HARD_BREAK_TOKEN = "@@PANDO_BR@@";
+
+function joinParagraphLines(paraLines: string[]): string {
+  let raw = "";
+  for (let idx = 0; idx < paraLines.length; idx++) {
+    const line = paraLines[idx];
+    const isLast = idx === paraLines.length - 1;
+    const hardBreak = !isLast && /\\\s*$/.test(line);
+    raw += hardBreak ? line.replace(/\\\s*$/, HARD_BREAK_TOKEN) : line;
+    if (!isLast && !hardBreak) raw += " ";
+  }
+  return raw;
+}
+
 export function parseInline(s: string): string {
   return escapeHtml(s)
     .replace(/`([^`\n]+)`/g, "<code>$1</code>")
@@ -169,7 +187,8 @@ export function parseMarkdown(md: string): string {
       i++;
     }
     if (paraLines.length > 0) {
-      html += `<p data-source-line="${paraStart}">${parseInline(paraLines.join(" "))}</p>\n`;
+      const parsed = parseInline(joinParagraphLines(paraLines)).split(HARD_BREAK_TOKEN).join("<br>");
+      html += `<p data-source-line="${paraStart}">${parsed}</p>\n`;
     } else {
       i++;
     }

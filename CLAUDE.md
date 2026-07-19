@@ -141,9 +141,8 @@ The next planned piece of work (not started) is the **newsletter section on danb
 
 ## Markdown syntax additions beyond tree
 
-Pando's editor is standard markdown plus two block-level extensions not in tree's parser,
-implemented in parallel in `lib/markdown/parse.ts` (browser preview) and `lib/markdown/email.ts`
-(email render):
+Pando's editor is standard markdown plus a few extensions not in tree's parser, implemented in
+parallel in `lib/markdown/parse.ts` (browser preview) and `lib/markdown/email.ts` (email render):
 
 - **`:::gallery` ... `:::`** — a fenced block of `![caption](url)` lines, rendered as a real CSS
   grid in the browser preview and an HTML table grid in email (email clients don't support
@@ -153,6 +152,12 @@ implemented in parallel in `lib/markdown/parse.ts` (browser preview) and `lib/ma
 - **`-# text`** — a small, muted metadata line (e.g. `-# Issue #12 — July 18, 2026` at the top of
   an issue). Renders as `.meta-text` / `.email-meta`, distinct from `>` blockquotes (which have a
   left border and italics — a pull-quote look, not a subtle caption).
+- **A line ending in `\`** forces a `<br>` line break within a paragraph, without starting a new
+  paragraph (which would add a blank-line gap). A single newline with no backslash still just
+  soft-wraps into a space, same as standard markdown. Implemented via `joinParagraphLines()` +
+  a `HARD_BREAK_TOKEN` placeholder string (plain ASCII, deliberately not a control character —
+  an earlier draft used a literal `\0` byte, which is invisible in editors/grep and dangerous to
+  match against, so don't reintroduce that).
 
 ## Useful entry points
 

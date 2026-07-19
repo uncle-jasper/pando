@@ -20,6 +20,22 @@ function stripAnnotations(text: string): string {
   return text.replace(/%\{[^}]*\}/g, "");
 }
 
+// Pando addition (not in tree): see the matching comment in lib/markdown/parse.ts —
+// a line ending in "\" forces a line break within a paragraph.
+const HARD_BREAK_TOKEN = "@@PANDO_BR@@";
+
+function joinParagraphLines(paraLines: string[]): string {
+  let raw = "";
+  for (let idx = 0; idx < paraLines.length; idx++) {
+    const line = paraLines[idx];
+    const isLast = idx === paraLines.length - 1;
+    const hardBreak = !isLast && /\\\s*$/.test(line);
+    raw += hardBreak ? line.replace(/\\\s*$/, HARD_BREAK_TOKEN) : line;
+    if (!isLast && !hardBreak) raw += " ";
+  }
+  return raw;
+}
+
 function isAbsoluteHttpsUrl(url: string): boolean {
   return /^https:\/\//i.test(url);
 }
@@ -186,7 +202,8 @@ export function renderEmailBody(md: string): string {
       i++;
     }
     if (paraLines.length > 0) {
-      html += `<p class="email-p">${parseInlineEmail(paraLines.join(" "))}</p>\n`;
+      const parsed = parseInlineEmail(joinParagraphLines(paraLines)).split(HARD_BREAK_TOKEN).join("<br>");
+      html += `<p class="email-p">${parsed}</p>\n`;
     } else {
       i++;
     }
