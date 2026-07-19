@@ -137,6 +137,8 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         ".cm-gutters": { display: "none" },
         ".cm-selectionBackground": { background: "var(--accent) !important", opacity: "0.25" },
         "&.cm-focused .cm-selectionBackground": { background: "var(--accent) !important", opacity: "0.25" },
+        // CodeMirror's default cursor color is hardcoded black, invisible in dark mode.
+        ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--text)" },
       }),
     ];
 
