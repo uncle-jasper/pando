@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { campaigns } from "@/lib/schema";
 import { deriveTitle } from "@/lib/markdown/parse";
+import { extractImageUrls, deleteOrphanedImages } from "@/lib/imageCleanup";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -42,6 +43,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (existing.status !== "draft") {
     return NextResponse.json({ error: "Only draft campaigns can be deleted." }, { status: 409 });
   }
+  const imageUrls = extractImageUrls(existing.markdownBody, existing.heroImageUrl);
   await db.delete(campaigns).where(eq(campaigns.id, id));
+  await deleteOrphanedImages(imageUrls, id);
   return NextResponse.json({ ok: true });
 }

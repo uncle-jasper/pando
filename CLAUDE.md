@@ -100,7 +100,11 @@ genuinely necessary, and flag it clearly when that point arrives rather than ass
 - **Images admin page** (`/admin/images`) — grid of every uploaded image with size/date, Copy URL
   and Delete buttons, and a live storage-usage bar against the 1GB Vercel Blob free tier. Delete
   calls Blob's `del()` to actually remove the file, not just the DB row.
-- **Delete drafts** — campaigns list page has a delete action with a confirm dialog.
+- **Delete drafts** — campaigns list page has a delete action with a confirm dialog. Deleting a
+  draft also deletes its hero image and any inline `![]()` images from Blob + the `images` table,
+  but only the ones not still referenced by another campaign or template (`lib/imageCleanup.ts`
+  scans all campaigns/templates for the same URL before deleting — safe against shared/reused
+  images). Manual deletes from `/admin/images` always delete regardless of references.
 - **Footer** — every Pando page (`admin/(protected)/layout.tsx`, `admin/login`, `/subscribe`)
   now renders `components/Footer.tsx`: a minimal "2026 · Dan Benson" line.
 - **Aspen icon** — `public/aspen.png` used as the favicon (`app/icon.png`) and shown next to the
