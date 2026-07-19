@@ -43,7 +43,10 @@ function appUrl(): string {
 // enhancement for clients that honor prefers-color-scheme. Forcing theme="dark" skips the
 // media query and inlines the dark palette directly, so you can see exactly what a
 // dark-mode inbox would render without changing your own OS/browser setting.
-function emailCss(settings: SettingsLike, theme: "light" | "dark" = "light"): string {
+// `forceTheme` (preview-only) additionally drops the @media block even for theme="light" —
+// without it, previewing "Light" from a browser/OS already in dark mode gets overridden by
+// that same media query and renders dark, defeating the point of the toggle.
+function emailCss(settings: SettingsLike, theme: "light" | "dark" = "light", forceTheme = false): string {
   const bg = theme === "dark" ? settings.darkBg : settings.lightBg;
   const text = theme === "dark" ? settings.darkText : settings.lightText;
   const muted = theme === "dark" ? settings.darkMuted : settings.lightMuted;
@@ -74,7 +77,7 @@ function emailCss(settings: SettingsLike, theme: "light" | "dark" = "light"): st
   .email-footer { padding: 20px 32px; font-size:12px; color:${muted}; text-align:center; }
   .email-footer a { color:${muted}; }
 ${
-  theme === "light"
+  theme === "light" && !forceTheme
     ? `
   @media (prefers-color-scheme: dark) {
     body, .email-wrapper, .email-container { background:${settings.darkBg} !important; }
@@ -94,7 +97,8 @@ export function renderEmailHtml(
   campaign: CampaignLike,
   subscriber: SubscriberLike | null,
   settings: SettingsLike,
-  theme: "light" | "dark" = "light"
+  theme: "light" | "dark" = "light",
+  forceTheme = false
 ): string {
   const viewInBrowserUrl = `${appUrl()}/p/${campaign.id}`;
 
@@ -118,10 +122,10 @@ export function renderEmailHtml(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="color-scheme" content="light dark">
-<meta name="supported-color-schemes" content="light dark">
+<meta name="color-scheme" content="${forceTheme ? theme : "light dark"}">
+<meta name="supported-color-schemes" content="${forceTheme ? theme : "light dark"}">
 <title>${campaign.subject}</title>
-<style>${emailCss(settings, theme)}</style>
+<style>${emailCss(settings, theme, forceTheme)}</style>
 </head>
 <body>
 <div class="preheader">${campaign.preheader || ""}</div>

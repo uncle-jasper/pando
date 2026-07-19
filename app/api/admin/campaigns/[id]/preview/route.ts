@@ -16,6 +16,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!campaign) return new NextResponse("Not found.", { status: 404 });
 
   const settings = await getOrCreateSettings();
-  const html = renderEmailHtml(campaign, null, settings, theme);
+  // forceTheme: true — this preview is an explicit light/dark toggle for visual inspection,
+  // so it must render exactly the requested theme regardless of the viewer's own OS/browser
+  // color scheme (see the comment on emailCss in lib/email.ts for why that matters here).
+  const html = renderEmailHtml(campaign, null, settings, theme, true);
   return new NextResponse(html, { headers: { "content-type": "text/html; charset=utf-8" } });
 }
