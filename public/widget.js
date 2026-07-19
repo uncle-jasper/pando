@@ -15,17 +15,18 @@
   // manual override in localStorage under "db-theme" that wins over the OS setting.
   // Falling back to prefers-color-scheme (via a "pando-theme-dark" class either way)
   // keeps this correct for embeds on other sites that don't set that key.
-  var stored = null;
-  try { stored = localStorage.getItem("db-theme"); } catch (e) {}
-  var theme =
-    stored === "dark" || stored === "light"
+  function detectTheme() {
+    var stored = null;
+    try { stored = localStorage.getItem("db-theme"); } catch (e) {}
+    return stored === "dark" || stored === "light"
       ? stored
       : window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
       ? "dark"
       : "light";
+  }
 
   var container = document.createElement("div");
-  container.className = "pando-signup-widget pando-theme-" + theme;
+  container.className = "pando-signup-widget pando-theme-" + detectTheme();
   container.innerHTML =
     '<form class="pando-signup-form">' +
     '<input class="pando-signup-email" type="email" name="email" placeholder="you@example.com" required>' +
@@ -34,6 +35,23 @@
     '<p class="pando-signup-message" style="display:none;"></p>';
 
   script.parentNode.insertBefore(container, script.nextSibling);
+
+  // Host pages can flip light/dark live (no reload) via their own toggle button —
+  // e.g. danbenson.me instantly restyles the whole page when clicked. Watching for
+  // class/attribute changes on <html>/<body> catches that same moment, so the widget
+  // restyles in step with the rest of the page instead of staying frozen at load-time.
+  if (window.MutationObserver) {
+    var lastTheme = detectTheme();
+    var observer = new MutationObserver(function () {
+      var theme = detectTheme();
+      if (theme === lastTheme) return;
+      lastTheme = theme;
+      container.classList.remove("pando-theme-light", "pando-theme-dark");
+      container.classList.add("pando-theme-" + theme);
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "style", "data-theme"] });
+    observer.observe(document.body, { attributes: true, attributeFilter: ["class", "style", "data-theme"] });
+  }
 
   var form = container.querySelector(".pando-signup-form");
   var emailInput = container.querySelector(".pando-signup-email");
