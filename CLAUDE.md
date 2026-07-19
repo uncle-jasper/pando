@@ -122,6 +122,21 @@ genuinely necessary, and flag it clearly when that point arrives rather than ass
   now renders `components/Footer.tsx`: a minimal "2026 · Dan Benson" line.
 - **Aspen icon** — `public/aspen.png` used as the favicon (`app/icon.png`) and shown next to the
   "Pando" wordmark on the login screen and admin nav bar.
+- **Explicit Title field** on the campaign editor, separate from the auto-derived-then-frozen
+  behavior it replaced — see the `deriveTitle()` gotcha above.
+- **Manual light/dark theme toggle** in the admin nav (`components/ThemeToggle.tsx`) — cycles
+  Auto → Light → Dark, stored in `localStorage["pando-theme"]`, applied via a `data-theme`
+  attribute on `<html>` set by a `beforeInteractive` script in `app/layout.tsx` (avoids a flash
+  of the wrong theme on load; `<html>` has `suppressHydrationWarning` since that attribute is
+  intentionally added outside React's own render). Previously the admin UI only followed the
+  OS/browser's `prefers-color-scheme` automatically with no way to override it.
+- **Editor cursor is now visible in dark mode.** CodeMirror's default cursor color is hardcoded
+  black; `components/Editor.tsx`'s `EditorView.theme()` now sets `.cm-cursor`/`.cm-dropCursor` to
+  `var(--text)` so it's visible in both themes. Also removed `highlightActiveLine()` — the grey
+  active-line background made the already-dimmed syntax markers (`#`, `*`, etc.) nearly
+  unreadable against it.
+- **Newsletter signup widget is now actually embedded** on danbenson.me — see "Newsletter page
+  on danbenson.me" below for status and the widget's theme-detection gotcha.
 
 ## Known outstanding work (not yet done)
 
@@ -133,38 +148,48 @@ genuinely necessary, and flag it clearly when that point arrives rather than ass
   go.
 - Physical mailing address in Settings has been filled in by Dan already ("Taipei, Taiwan") —
   don't overwrite it.
-- **Newsletter page exists on danbenson.me** (`/newsletter`, page ID 399) as a **Draft** — not
-  published yet, only visible via the logged-in preview link. Has intro copy + the widget
-  embedded via a Custom HTML block, styled to match the site's Contact page (Jetpack form:
-  `Inconsolata` font, black border/button in light mode, white border/button in dark mode —
-  see the widget theme gotcha below). Publish it from wp-admin when Dan's ready; don't do it
-  without being asked.
+- **Newsletter page is built but still a Draft** — see "Newsletter page on danbenson.me" below.
+  Publish it from wp-admin when Dan's ready; don't do it without being asked.
+
+## Newsletter page on danbenson.me
+
+Per the original plan's phased rollout, this was step 1 of the newsletter section on
+danbenson.me itself (WordPress) — **now built**:
+
+- Live at `danbenson.me/newsletter` (WordPress page ID 399), status **Draft** — not published, only
+  visible via the logged-in preview link (`https://danbenson.me/?page_id=399&preview=true`).
+  Editable at `https://danbenson.me/wp-admin/post.php?post=399&action=edit`.
+- Intro copy ("MidThoughts is a newsletter about...") + the signup widget embedded via a Custom
+  HTML block (WordPress's block editor here has a modal HTML/CSS/JS code editor, not inline
+  editing — click "Edit code" on the block to get to it). If the visual editor ever gets messy
+  mid-edit (e.g. pasted text lands as page content instead of inside a block's code editor),
+  the reliable fix is the block editor's "⋮" menu → **Code editor**, which shows/lets you replace
+  the raw `<!-- wp:... -->` block markup directly — much less fragile than clicking through the
+  visual UI for a full rewrite.
+- Widget styling matches the site's Contact page (Jetpack form) exactly: `Inconsolata` font, thin
+  1px border, 26px height, no internal padding, 50px pill-radius button. Colors are a deliberate
+  black/white mirror per Dan's request (not the Contact form's actual gray tones): light mode is
+  black border + black button/white text, dark mode is white-ish border + white button/black text.
 - **`widget.js`'s light/dark detection matches `danbenson.me`'s own toggle, not just OS
   preference.** The site stores its manual light/dark choice in `localStorage["db-theme"]`
   (`"light"` or `"dark"`), which overrides the OS-level `prefers-color-scheme` — so a visitor
   whose OS is dark but who has toggled the site to light (or vice versa) sees the site's stored
   choice, not their OS setting. `widget.js` reads that same key on load and applies a
-  `pando-theme-light` / `pando-theme-dark` class to its container (falling back to
-  `prefers-color-scheme` only when the key isn't set, e.g. widget embedded on a different site).
-  Style hooks on host pages should target `.pando-theme-dark .pando-signup-email` etc., **not**
-  a `@media (prefers-color-scheme: dark)` block — that was the original approach and it drifted
-  out of sync with the real site state, which is how this got found in the first place.
-
-## Next up: newsletter page on danbenson.me
-
-The next planned piece of work (not started) is the **newsletter section on danbenson.me itself**
-(WordPress), per the original plan's phased rollout:
-
-1. Start simple: a `danbenson.me/newsletter` page with "coming soon" copy and just the signup
-   widget (`public/widget.js` embedded via a WordPress Custom HTML block — no theme/plugin changes
-   needed, see "WordPress signup widget" above).
-2. Once the first real issue has been sent, that same page grows an **archive** of past issues
-   below the signup form. Per the original plan, build this as a server-rendered WordPress
-   template/plugin (PHP) that queries a new public, read-only Pando API (`status = 'sent'`
-   campaigns only, never drafts) — not a client-side JS widget — so archived issues are real
-   server-rendered HTML for SEO/link-preview purposes, inheriting the site's theme CSS natively.
-   Pando's own `/p/[campaignId]` view-in-browser page stays the link used *inside* sent emails,
-   but the WordPress archive page becomes the canonical indexed copy.
+  `pando-theme-light` / `pando-theme-dark` class to its container, falling back to
+  `prefers-color-scheme` only when the key isn't set (e.g. embedded on a different site). It also
+  watches `<html>`/`<body>` via a `MutationObserver` so it restyles live if the site's toggle is
+  clicked without a page reload, matching how the rest of the page updates instantly. Style hooks
+  on host pages should target `.pando-theme-dark .pando-signup-email` etc., **not** a
+  `@media (prefers-color-scheme: dark)` block — that was the original approach and it drifted out
+  of sync with the real site state (found by testing: OS-level dark was true in the test browser,
+  but the site's own stored preference was light, so the widget rendered dark on a light page).
+- **Next step (not started):** once the first real issue has been sent, this page grows an
+  **archive** of past issues below the signup form. Per the original plan, build this as a
+  server-rendered WordPress template/plugin (PHP) that queries a new public, read-only Pando API
+  (`status = 'sent'` campaigns only, never drafts) — not a client-side JS widget — so archived
+  issues are real server-rendered HTML for SEO/link-preview purposes, inheriting the site's theme
+  CSS natively. Pando's own `/p/[campaignId]` view-in-browser page stays the link used *inside*
+  sent emails, but the WordPress archive page becomes the canonical indexed copy.
 
 ## Markdown syntax additions beyond tree
 
