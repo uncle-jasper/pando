@@ -1,5 +1,6 @@
 "use client";
 
+import { resizeImageFile } from "@/lib/client-image-resize";
 import { useEffect, useRef, useState, use as usePromise } from "react";
 import { useRouter } from "next/navigation";
 import Editor, { type EditorHandle } from "@/components/Editor";
@@ -113,6 +114,25 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
   function handleGalleryInsert(urls: string[]) {
     const block = `\n:::gallery\n${urls.map((u) => `![](${u})`).join("\n")}\n:::\n`;
     editorRef.current?.insertAtCursor(block);
+  }
+
+  async function handleDropFiles(files: File[], pos: number) {
+    let insertPos = pos;
+    for (const file of files) {
+      try {
+        const resized = await resizeImageFile(file);
+        const formData = new FormData();
+        formData.append("file", resized);
+        const res = await fetch("/api/admin/uploads", { method: "POST", body: formData });
+        if (!res.ok) continue;
+        const row = await res.json();
+        const markdown = `![](${row.url})\n`;
+        editorRef.current?.insertAt(insertPos, markdown);
+        insertPos += markdown.length;
+      } catch {
+        // skip a file that failed to resize or upload
+      }
+    }
   }
 
   async function handleOpenPreview() {
@@ -231,6 +251,7 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
         </button>
         <ImageUploadButton label="Insert image" onUploaded={handleImageInsert} />
         <GalleryUploadButton onUploaded={handleGalleryInsert} />
+        <button className="px-2 py-1 text-sm border border-[var(--border)] rounded" onClick={() => editorRef.current?.wrapFullBleed()}>Full-bleed</button>
         <button onClick={handleOpenPreview} className="px-2 py-1 text-sm border border-[var(--border)] rounded">
           Preview email
         </button>
@@ -260,7 +281,7 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
       </div>
       <div className="flex flex-1 min-h-0">
         <div className="w-1/2 border-r border-[var(--border)] p-4 min-h-0 overflow-auto">
-          <Editor ref={editorRef} value={markdown} onChange={handleMarkdownChange} />
+          <Editor ref={editorRef} value={markdown} onChange={handleMarkdownChange} onDropFiles={handleDropFiles} />
         </div>
         <div className="w-1/2 overflow-auto p-6">
           <Preview markdown={markdown} heroImageUrl={heroImageUrl || undefined} heroImageAlt={campaign.heroImageAlt || undefined} />
