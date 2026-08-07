@@ -27,7 +27,7 @@ export default function Preview({ markdown, heroImageUrl, heroImageAlt }: Previe
   }, []);
 
   const footerHtml = footer
-  ? [footer.footerTagline || "", [footer.fromName, footer.physicalMailingAddress].filter(Boolean).join(" &middot; "), `<span style="text-decoration: underline;">View in browser</span> &middot; <span style="text-decoration: underline;">Unsubscribe</span>`].filter(Boolean).join("<br>")
+  ? [footer.footerTagline || "", footer.physicalMailingAddress, `<span style="text-decoration: underline;">View in browser</span> &middot; <span style="text-decoration: underline;">Unsubscribe</span>`].filter(Boolean).join("<br>")
     : "";
 
   return (
