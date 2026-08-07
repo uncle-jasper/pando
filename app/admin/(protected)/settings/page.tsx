@@ -7,6 +7,7 @@ interface Settings {
   fromEmail: string;
   replyTo: string | null;
   physicalMailingAddress: string;
+    footerTagline: string | null;
   fontFamily: string;
   lightBg: string;
   lightText: string;
@@ -112,6 +113,7 @@ export default function SettingsPage() {
             className="w-full mt-1 px-2 py-1 border border-[var(--border)] rounded bg-transparent"
           />
         </label>
+                <label className="text-sm">Footer tagline (optional)<input value={settings.footerTagline || ""} onChange={(e) => setSettings({ ...settings, footerTagline: e.target.value || null })} placeholder="Middle Ground — a collection of rare grooves and rarer thoughts, by Dan Benson" className="w-full mt-1 px-2 py-1 border border-[var(--border)] rounded bg-transparent" /></label>
 
         <h2 className="text-sm font-semibold mt-4">Branding</h2>
         <p className="text-xs text-[var(--muted)] mb-1">
