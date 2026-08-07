@@ -208,7 +208,7 @@ export function parseMarkdown(md: string): string {
       if (/^[-*] /.test(l) || /^\d+\. /.test(l)) break;
       if (/^---+$/.test(l)) break;
       if (/^\[\^[^\]]+\]:/.test(l)) break;
-      if (l.trim() === ":::gallery" || l.trim() === ":::") break;
+      if (l.trim() === ":::gallery" || l.trim() === ":::full" || l.trim() === ":::") break;
       paraLines.push(l);
       i++;
     }
