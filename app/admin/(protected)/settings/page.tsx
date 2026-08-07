@@ -164,7 +164,7 @@ export default function SettingsPage() {
           <p style={{ fontWeight: 700, fontSize: "18px", marginBottom: "8px" }}>Your newsletter title</p>
           <p style={{ marginBottom: "10px" }}>This is what your campaign emails will look like.</p>
           <p style={{ color: muted, fontSize: "12px" }}>
-            {settings.fromName || "Sender name"} · {settings.physicalMailingAddress || "Mailing address"}
+            {settings.physicalMailingAddress || "Mailing address"}
           </p>
         </div>
       </div>
