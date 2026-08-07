@@ -72,6 +72,25 @@ function parseGalleryBlock(lines: string[], startIdx: number): { html: string; n
   return { html: `<div class="gallery" data-count="${images.length}">${items}</div>\n`, nextIdx: i + 1 };
 }
 
+function parseFullBleedBlock(lines: string[], startIdx: number): { html: string; nextIdx: number } | null {
+  // Pando addition (not in tree): ":::full" fenced block wraps a single image line and
+  // renders it edge-to-edge (no inset padding), independent of the top-of-email hero image.
+  if (lines[startIdx].trim() !== ":::full") return null;
+  let i = startIdx + 1;
+  let src = "";
+  let alt = "";
+  while (i < lines.length && lines[i].trim() !== ":::") {
+    const m = lines[i].match(/^!\[([^\]]*)\]\(([^)]+)\)/);
+    if (m) {
+      alt = m[1];
+      src = m[2];
+    }
+    i++;
+  }
+  const html = `<img class="full-bleed-image" data-source-line="${startIdx + 1}" src="${escapeHtml(src)}" alt="${escapeHtml(alt)}">\n`;
+  return { html, nextIdx: i + 1 };
+}
+
 export function parseMarkdown(md: string): string {
   const footnoteMap = new Map<string, string>();
   const footnoteOrder: string[] = [];
@@ -101,6 +120,13 @@ export function parseMarkdown(md: string): string {
     if (gallery) {
       html += gallery.html;
       i = gallery.nextIdx;
+      continue;
+    }
+
+    const fullBleed = parseFullBleedBlock(lines, i);
+    if (fullBleed) {
+      html += fullBleed.html;
+      i = fullBleed.nextIdx;
       continue;
     }
 
