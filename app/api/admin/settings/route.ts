@@ -18,6 +18,7 @@ export async function PATCH(req: NextRequest) {
   if (typeof body.fromEmail === "string") update.fromEmail = body.fromEmail;
   if (typeof body.replyTo === "string" || body.replyTo === null) update.replyTo = body.replyTo;
   if (typeof body.physicalMailingAddress === "string") update.physicalMailingAddress = body.physicalMailingAddress;
+    if (typeof body.footerTagline === "string" || body.footerTagline === null) update.footerTagline = body.footerTagline;
   if (typeof body.fontFamily === "string") update.fontFamily = body.fontFamily;
   if (typeof body.lightBg === "string") update.lightBg = body.lightBg;
   if (typeof body.lightText === "string") update.lightText = body.lightText;
