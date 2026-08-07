@@ -92,6 +92,27 @@ function parseGalleryTable(lines: string[], startIdx: number): { html: string; n
   };
 }
 
+function parseFullBleedTable(lines: string[], startIdx: number): { html: string; nextIdx: number } | null {
+  // Pando addition (not in tree): ":::full" fenced block wraps a single image line and
+  // renders it edge-to-edge in the email (full-width table cell, no side padding),
+  // independent of the top-of-email hero image.
+  if (lines[startIdx].trim() !== ":::full") return null;
+  let i = startIdx + 1;
+  let src = "";
+  let alt = "";
+  while (i < lines.length && lines[i].trim() !== ":::") {
+    const m = lines[i].match(/^!\[([^\]]*)\]\(([^)]+)\)/);
+    if (m && isAbsoluteHttpsUrl(m[2])) {
+      alt = m[1];
+      src = m[2];
+    }
+    i++;
+  }
+  if (!src) return { html: "", nextIdx: i + 1 };
+  const html = `<table role="presentation" class="full-bleed-table" width="100%" cellpadding="0" cellspacing="0"><tbody><tr><td><img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" class="email-full-bleed" width="600"></td></tr></tbody></table>\n`;
+  return { html, nextIdx: i + 1 };
+}
+
 export function renderEmailBody(md: string): string {
   const footnoteMap = new Map<string, string>();
   const footnoteOrder: string[] = [];
@@ -120,6 +141,13 @@ export function renderEmailBody(md: string): string {
     if (gallery) {
       html += gallery.html;
       i = gallery.nextIdx;
+      continue;
+    }
+
+    const fullBleed = parseFullBleedTable(lines, i);
+    if (fullBleed) {
+      html += fullBleed.html;
+      i = fullBleed.nextIdx;
       continue;
     }
 
@@ -197,7 +225,7 @@ export function renderEmailBody(md: string): string {
       if (/^[-*] /.test(l) || /^\d+\. /.test(l)) break;
       if (/^---+$/.test(l)) break;
       if (/^\[\^[^\]]+\]:/.test(l)) break;
-      if (l.trim() === ":::gallery" || l.trim() === ":::") break;
+      if (l.trim() === ":::gallery" || l.trim() === ":::full" || l.trim() === ":::") break;
       paraLines.push(l);
       i++;
     }
