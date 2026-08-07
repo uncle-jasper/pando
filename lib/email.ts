@@ -73,6 +73,8 @@ function emailCss(settings: SettingsLike, theme: "light" | "dark" = "light", for
   .gallery-cell { padding:4px; vertical-align:top; }
   .gallery-img { width:100%; height:auto; display:block; border:0; border-radius:4px; }
   .gallery-caption { font-size:12px; color:${muted}; margin-top:4px; }
+  .full-bleed-table { margin: 12px -32px; width: calc(100% + 64px) !important; max-width: calc(100% + 64px) !important; }
+  .email-full-bleed { width:100%; height:auto; display:block; border:0; }
   .email-footnotes { border-top:1px solid ${muted}55; margin-top:20px; padding-top:12px; }
   .email-footnote { font-size:13px; color:${muted}; margin:0 0 6px; }
   .preheader { display:none !important; visibility:hidden; opacity:0; height:0; width:0; overflow:hidden; mso-hide:all; }
