@@ -14,6 +14,7 @@ interface CampaignLike {
 interface SettingsLike {
   fromName: string;
   physicalMailingAddress: string;
+    footerTagline: string | null;
   fontFamily: string;
   lightBg: string;
   lightText: string;
@@ -99,7 +100,11 @@ export function renderEmailHtml(
   subscriber: SubscriberLike | null,
   settings: SettingsLike,
   theme: "light" | "dark" = "light",
-  forceTheme = false
+  forceTheme = false,
+    // Admin-only: shows illustrative (non-functional) View in browser/Unsubscribe
+    // placeholders even though there's no real subscriber to link to. Never set this
+    // for real sends or the public /p/[id] page.
+    previewMode = false
 ): string {
   const viewInBrowserUrl = `${appUrl()}/p/${campaign.id}`;
 
@@ -116,7 +121,9 @@ export function renderEmailHtml(
     ? `<a href="${viewInBrowserUrl}">View in browser</a> &middot; <a href="${appUrl()}/unsubscribe/${makeSubscriberToken(
         subscriber.id
       )}">Unsubscribe</a>`
-    : "";
+        : previewMode
+      ? `<span style="text-decoration:underline">View in browser</span> &middot; <span style="text-decoration:underline">Unsubscribe</span>`
+        : "";
 
   const html = `<!DOCTYPE html>
 <html>
@@ -139,7 +146,7 @@ ${heroHtml}
 ${bodyHtml}
 </div>
 <div class="email-footer">
-${settings.fromName} &middot; ${settings.physicalMailingAddress}${footerLinks ? `<br>${footerLinks}` : ""}
+${settings.footerTagline ? `${settings.footerTagline}<br>` : ""}${settings.fromName} &middot; ${settings.physicalMailingAddress}${footerLinks ? `<br>${footerLinks}` : ""}
 </div>
 </td></tr>
 </tbody>
