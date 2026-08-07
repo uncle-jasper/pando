@@ -45,7 +45,8 @@ function parseInlineEmail(s: string): string {
     .replace(/`([^`\n]+)`/g, '<code>$1</code>')
     .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_match, alt, src) => {
       if (!isAbsoluteHttpsUrl(src)) return ""; // drop images we can't safely serve to an inbox
-      return `<img src="${src}" alt="${alt}" class="email-img">`;
+      const img = `<img src="${src}" alt="${alt}" class="email-img">`;
+      return alt ? `${img}<span class="email-image-caption">${alt}</span>` : img;
     })
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, text, href) => {
       if (!isAbsoluteHttpsUrl(href)) return text; // drop the link, keep the text
@@ -109,7 +110,8 @@ function parseFullBleedTable(lines: string[], startIdx: number): { html: string;
     i++;
   }
   if (!src) return { html: "", nextIdx: i + 1 };
-  const html = `<table role="presentation" class="full-bleed-table" width="100%" cellpadding="0" cellspacing="0"><tbody><tr><td><img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" class="email-full-bleed" width="600"></td></tr></tbody></table>\n`;
+  const captionRow = alt ? `<tr><td class="full-bleed-caption">${escapeHtml(alt)}</td></tr>` : "";
+    const html = `<table role="presentation" class="full-bleed-table" width="100%" cellpadding="0" cellspacing="0"><tbody><tr><td><img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" class="email-full-bleed" width="600"></td></tr>${captionRow}</tbody></table>\n`;
   return { html, nextIdx: i + 1 };
 }
 
