@@ -23,22 +23,27 @@ export interface EditorHandle {
   insertAtCursor: (text: string) => void;
   wrapSelection: (before: string, after: string) => void;
   getContent: () => string;
+  insertAt: (pos: number, text: string) => void;
+  wrapFullBleed: () => void;
 }
 
 interface EditorProps {
   value: string;
   onChange: (text: string) => void;
   placeholder?: string;
+  onDropFiles?: (files: File[], pos: number) => void;
 }
 
 const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
-  { value, onChange, placeholder },
+  { value, onChange, placeholder, onDropFiles },
   ref
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<any>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const onDropFilesRef = useRef(onDropFiles);
+  onDropFilesRef.current = onDropFiles;
   const [cm6Ready, setCm6Ready] = useState(false);
 
   useEffect(() => {
@@ -86,6 +91,30 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       view.focus();
     }
 
+    function insertAtInternal(pos: number, text: string) {
+      const view = viewRef.current;
+      if (!view) return;
+      const clamped = Math.max(0, Math.min(pos, view.state.doc.length));
+      view.dispatch({
+        changes: { from: clamped, to: clamped, insert: text },
+        selection: EditorSelection.cursor(clamped + text.length),
+        userEvent: "input",
+      });
+      view.focus();
+    }
+
+    function wrapFullBleedInternal() {
+      const view = viewRef.current;
+      if (!view) return;
+      const line = view.state.doc.lineAt(view.state.selection.main.head);
+      const insert = ":::full\n" + line.text + "\n:::";
+      view.dispatch({
+        changes: { from: line.from, to: line.to, insert },
+        userEvent: "input",
+      });
+      view.focus();
+    }
+
     function toggleHeading(level: number) {
       return (view: any) => {
         const { state } = view;
@@ -107,6 +136,20 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       history(),
       drawSelection({ cursorBlinkRate: 1000 }),
       dropCursor(),
+      EditorView.domEventHandlers({
+        dragover(event: DragEvent) {
+          event.preventDefault();
+        },
+        drop(event: DragEvent, view: any) {
+          const files = Array.from(event.dataTransfer?.files || []).filter((f: File) => f.type.startsWith("image/"));
+          if (files.length === 0) return false;
+          event.preventDefault();
+          const coords = view.posAtCoords({ x: event.clientX, y: event.clientY });
+          const pos = coords == null ? view.state.doc.length : coords;
+          onDropFilesRef.current?.(files, pos);
+          return true;
+        },
+      }),
       EditorView.lineWrapping,
       EditorState.allowMultipleSelections.of(true),
       rectangularSelection(),
@@ -148,6 +191,8 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
     (containerRef.current as any).__wrapSelection = wrapSelectionInternal;
     (containerRef.current as any).__insertAtCursor = insertAtCursorInternal;
+    (containerRef.current as any).__insertAt = insertAtInternal;
+    (containerRef.current as any).__wrapFullBleed = wrapFullBleedInternal;
 
     return () => {
       view.destroy();
@@ -163,6 +208,12 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       (containerRef.current as any)?.__wrapSelection?.(before, after);
     },
     getContent: () => (viewRef.current ? viewRef.current.state.doc.toString() : ""),
+    insertAt: (pos: number, text: string) => {
+      (containerRef.current as any)?.__insertAt?.(pos, text);
+    },
+    wrapFullBleed: () => {
+      (containerRef.current as any)?.__wrapFullBleed?.();
+    },
   }));
 
   // Keep the editor in sync if `value` is replaced from outside (e.g. loading a draft).
