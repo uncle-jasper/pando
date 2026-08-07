@@ -115,5 +115,5 @@ body {
 /* Optional image captions — Pando addition, not present in tree. Mirrors the
    existing gallery-item figcaption convention (alt text becomes a visible caption
    when non-empty) for single inline images and full-bleed images. */
-.pando-preview .image-caption { display: block; font-size: 0.8em; color: var(--muted); margin-top: 4px; }
-.pando-preview .full-bleed-caption { font-size: 0.8em; color: var(--muted); margin: 4px 0 1em; }
+.pando-preview .image-caption { display: block; font-size: 0.8em; color: var(--muted); margin-top: 4px; text-align: center; }
+.pando-preview .full-bleed-caption { font-size: 0.8em; color: var(--muted); margin: 4px 0 1em; text-align: center; }
