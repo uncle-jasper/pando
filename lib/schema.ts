@@ -70,6 +70,9 @@ export const settings = pgTable("settings", {
   fromEmail: text("from_email").notNull().default(""),
   replyTo: text("reply_to"),
   physicalMailingAddress: text("physical_mailing_address").notNull().default(""),
+    // Optional, customizable via Settings UI. Rendered centered in the compliance
+    // footer (lib/email.ts), above the fromName/address line. Null/empty = omitted.
+    footerTagline: text("footer_tagline"),
   // Branding: sampled from the real danbenson.me site (WordPress "minimalio" theme)
   // so campaign emails and the view-in-browser page match its light/dark look.
   fontFamily: text("font_family").notNull().default('Inconsolata, ui-monospace, "SF Mono", Menlo, monospace'),
