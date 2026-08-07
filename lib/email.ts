@@ -69,12 +69,14 @@ function emailCss(settings: SettingsLike, theme: "light" | "dark" = "light", for
   .email-hr { border:none; border-top:1px solid ${muted}55; margin:20px 0; }
   .email-link { color:${text}; text-decoration:underline; }
   .email-img { max-width:100%; display:block; border:0; margin: 10px 0; }
+  .email-image-caption { display:block; font-size:12px; color:${muted}; margin-top:4px; }
   .gallery-table { margin: 10px 0; }
   .gallery-cell { padding:4px; vertical-align:top; }
   .gallery-img { width:100%; height:auto; display:block; border:0; border-radius:4px; }
   .gallery-caption { font-size:12px; color:${muted}; margin-top:4px; }
   .full-bleed-table { margin: 12px -32px; width: calc(100% + 64px) !important; max-width: calc(100% + 64px) !important; }
   .email-full-bleed { width:100%; height:auto; display:block; border:0; }
+  .full-bleed-caption { font-size:12px; color:${muted}; padding: 4px 32px 0; }
   .email-footnotes { border-top:1px solid ${muted}55; margin-top:20px; padding-top:12px; }
   .email-footnote { font-size:13px; color:${muted}; margin:0 0 6px; }
   .preheader { display:none !important; visibility:hidden; opacity:0; height:0; width:0; overflow:hidden; mso-hide:all; }
@@ -89,7 +91,7 @@ ${
       color:${settings.darkText} !important;
     }
     .email-blockquote { color:${settings.darkMuted} !important; border-left-color:${settings.darkMuted} !important; }
-    .email-footer, .email-footer a, .email-footnote, .gallery-caption, .email-meta { color:${settings.darkMuted} !important; }
+    .email-footer, .email-footer a, .email-footnote, .gallery-caption, .email-meta , .email-image-caption, .full-bleed-caption{ color:${settings.darkMuted} !important; }
     .email-pre { background:${settings.darkMuted}33 !important; }
   }`
     : ""
