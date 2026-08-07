@@ -146,7 +146,7 @@ ${heroHtml}
 ${bodyHtml}
 </div>
 <div class="email-footer">
-${settings.footerTagline ? `${settings.footerTagline}<br>` : ""}${settings.fromName} &middot; ${settings.physicalMailingAddress}${footerLinks ? `<br>${footerLinks}` : ""}
+${settings.footerTagline ? `${settings.footerTagline}<br>` : ""}${settings.physicalMailingAddress}${footerLinks ? `<br>${footerLinks}` : ""}
 </div>
 </td></tr>
 </tbody>
