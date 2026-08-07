@@ -32,7 +32,10 @@ function joinParagraphLines(paraLines: string[]): string {
 export function parseInline(s: string): string {
   return escapeHtml(s)
     .replace(/`([^`\n]+)`/g, "<code>$1</code>")
-    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%">')
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_m, alt, src) => {
+      const img = `<img src="${src}" alt="${alt}" style="max-width:100%">`;
+      return alt ? `${img}<span class="image-caption">${alt}</span>` : img;
+    })
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
@@ -87,7 +90,8 @@ function parseFullBleedBlock(lines: string[], startIdx: number): { html: string;
     }
     i++;
   }
-  const html = `<img class="full-bleed-image" data-source-line="${startIdx + 1}" src="${escapeHtml(src)}" alt="${escapeHtml(alt)}">\n`;
+  const caption = alt ? `<div class="full-bleed-caption" data-source-line="${startIdx + 1}">${escapeHtml(alt)}</div>\n` : "";
+  const html = `<img class="full-bleed-image" data-source-line="${startIdx + 1}" src="${escapeHtml(src)}" alt="${escapeHtml(alt)}">\n${caption}`;
   return { html, nextIdx: i + 1 };
 }
 
