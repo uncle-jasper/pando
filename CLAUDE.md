@@ -8,6 +8,11 @@ admin app — one person (Dan) logs in and sends to his own subscriber list. Not
 **Live at:** https://pando.danbenson.me (Vercel project `pando` under `uncle-jaspers-projects`).
 **Repo:** github.com/uncle-jasper/pando (branch `main`, auto-deploys to production on push).
 
+**Newsletter name: "3 Stops from Main"** (renamed 2026-09-13; previously "Middle Ground," and
+before that "MidThoughts" on Substack). The name isn't hardcoded in this repo — it lives in the
+`settings.fromName` DB field (Settings → From name in the admin UI), which Dan updates himself.
+The `danbenson.me/newsletter` WordPress page (draft, unpublished) still has old "MidThoughts"
+intro copy that needs updating separately, outside this repo.
 ## Where this came from
 
 Forked from a separate project called **tree** (a distraction-free markdown editor), which lives
