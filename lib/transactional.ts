@@ -4,7 +4,10 @@ function appUrl(): string {
   return process.env.APP_URL || "http://localhost:3000";
 }
 
-export function confirmationEmailHtml(confirmUrl: string, fromName: string): string {
+export function confirmationEmailHtml(confirmUrl: string, newsletterName: string | null): string {
+  const body = newsletterName
+    ? `Please confirm you'd like to receive the ${newsletterName} newsletter.`
+    : `Please confirm you'd like to receive this newsletter.`;
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -18,7 +21,7 @@ export function confirmationEmailHtml(confirmUrl: string, fromName: string): str
 <tbody><tr><td style="padding:32px;text-align:center;">
 <h1 style="font-size:22px;margin:0 0 16px;">Confirm your subscription</h1>
 <p style="font-size:15px;line-height:1.6;margin:0 0 24px;">
-Please confirm you'd like to receive the ${fromName}'s newsletter.
+${body}
 </p>
 <a href="${confirmUrl}" style="display:inline-block;background:#8b6e4e;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:6px;font-size:15px;">Confirm subscription</a>
 <p style="font-size:12px;color:#999;margin-top:28px;">

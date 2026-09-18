@@ -67,6 +67,13 @@ export const sends = pgTable("sends", {
 export const settings = pgTable("settings", {
   id: uuid("id").primaryKey().defaultRandom(),
   fromName: text("from_name").notNull().default(""),
+  // The newsletter's public title (e.g. "3 Stops from Main"), distinct from fromName
+  // (the compliance sending identity, e.g. "Dan Benson" — CAN-SPAM/GDPR requires an
+  // accurate sender, which may be a personal name rather than the publication's brand).
+  // Used anywhere copy needs to name the newsletter itself, starting with the
+  // double opt-in confirmation email (lib/transactional.ts). Null/empty = confirmation
+  // copy falls back to generic phrasing rather than showing a blank.
+  newsletterName: text("newsletter_name"),
   fromEmail: text("from_email").notNull().default(""),
   replyTo: text("reply_to"),
   physicalMailingAddress: text("physical_mailing_address").notNull().default(""),

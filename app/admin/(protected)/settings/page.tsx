@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 interface Settings {
   fromName: string;
+  newsletterName: string | null;
   fromEmail: string;
   replyTo: string | null;
   physicalMailingAddress: string;
@@ -76,9 +77,23 @@ export default function SettingsPage() {
     <div className="p-6 flex-1 overflow-auto flex gap-10 flex-wrap">
       <form onSubmit={handleSave} className="flex flex-col gap-3 max-w-lg">
         <h1 className="text-lg font-semibold mb-1">Settings</h1>
+        <label className="text-sm">
+          Newsletter name
+          <input
+            value={settings.newsletterName || ""}
+            onChange={(e) => setSettings({ ...settings, newsletterName: e.target.value || null })}
+            placeholder="3 Stops from Main"
+            className="w-full mt-1 px-2 py-1 border border-[var(--border)] rounded bg-transparent"
+          />
+        </label>
+        <p className="text-xs text-[var(--muted)] -mt-1 mb-2">
+          The publication&apos;s title, used in copy that refers to the newsletter itself
+          (e.g. the subscribe confirmation email).
+        </p>
         <p className="text-sm text-[var(--muted)] mb-3">
-          This sending identity appears in every email and its compliance footer (required by
-          CAN-SPAM/GDPR).
+          From name below is a separate, personal sending identity — it appears as the visible
+          &quot;From&quot; on every email and in the compliance footer (required by CAN-SPAM/GDPR),
+          and doesn&apos;t have to match the newsletter name above.
         </p>
         <label className="text-sm">
           From name

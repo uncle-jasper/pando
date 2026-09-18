@@ -10,7 +10,16 @@ admin app — one person (Dan) logs in and sends to his own subscriber list. Not
 
 **Newsletter name: "3 Stops from Main"** (renamed 2026-09-13; previously "Middle Ground," and
 before that "MidThoughts" on Substack). The name isn't hardcoded in this repo — it lives in the
-`settings.fromName` DB field (Settings → From name in the admin UI), which Dan updates himself.
+`settings.newsletterName` DB field (Settings → Newsletter name in the admin UI), which Dan updates
+himself. This is a **separate field from `settings.fromName`** ("From name" in the same UI) —
+`fromName` is the compliance sending identity that shows as the visible "From:" on every email
+(CAN-SPAM/GDPR requires an accurate sender; Dan currently has this set to "Dan Benson," his own
+name, by choice — it does not need to match the newsletter's title). An earlier version of this
+doc incorrectly said the newsletter name lived in `fromName`, which caused the double opt-in
+confirmation email (`lib/transactional.ts`) to say "Dan Benson's newsletter" — fixed 2026-09-18 by
+adding the dedicated `newsletterName` column and decoupling `confirmationEmailHtml()` from
+`fromName` entirely. **`newsletterName` needs a `drizzle-kit push` against the live DB before this
+takes effect in production** — see the schema-migration note below.
 The `danbenson.me/newsletter` WordPress page (draft, unpublished) still has old "MidThoughts"
 intro copy that needs updating separately, outside this repo.
 ## Where this came from
@@ -145,6 +154,13 @@ genuinely necessary, and flag it clearly when that point arrives rather than ass
 
 ## Known outstanding work (not yet done)
 
+- **`newsletterName` column needs a DB push.** Added to `settings` in `lib/schema.ts`
+  (2026-09-18) but this repo has no migration-file history — schema changes are applied with
+  `npx drizzle-kit push` directly against `DATABASE_URL`, run by whoever has `.env.local` (Dan) or
+  against the Vercel-configured `DATABASE_URL`. Until that push runs, the column doesn't exist on
+  the live table and `getOrCreateSettings()`/the PATCH route will error on it. After the push,
+  Dan still needs to fill in Settings → Newsletter name himself (defaults to null — the
+  confirmation email falls back to generic "this newsletter" phrasing until it's set).
 - **Settings → From email is currently wrong.** It needs to be `@pando.danbenson.me` (the
   verified subdomain), not `@danbenson.me` (root domain, unverified — sends would fail/lose
   authentication). Dan needs to fix this himself in Settings.

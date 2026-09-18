@@ -15,6 +15,8 @@ export async function PATCH(req: NextRequest) {
 
   const update: Partial<typeof settings.$inferInsert> = {};
   if (typeof body.fromName === "string") update.fromName = body.fromName;
+  if (typeof body.newsletterName === "string" || body.newsletterName === null)
+    update.newsletterName = body.newsletterName;
   if (typeof body.fromEmail === "string") update.fromEmail = body.fromEmail;
   if (typeof body.replyTo === "string" || body.replyTo === null) update.replyTo = body.replyTo;
   if (typeof body.physicalMailingAddress === "string") update.physicalMailingAddress = body.physicalMailingAddress;

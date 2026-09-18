@@ -42,7 +42,7 @@ export async function subscribePublic(
   }
 
   const token = makeSubscriberToken(subscriber.id);
-  const html = confirmationEmailHtml(confirmUrlFor(token), settings.fromName || "Pando");
+  const html = confirmationEmailHtml(confirmUrlFor(token), settings.newsletterName?.trim() || null);
 
   try {
     await sendEmail({
