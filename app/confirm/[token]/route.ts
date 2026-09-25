@@ -3,6 +3,9 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { subscribers } from "@/lib/schema";
 import { verifySubscriberToken } from "@/lib/tokens";
+import { getOrCreateSettings } from "@/lib/settings";
+import { newSubscriberNotificationHtml } from "@/lib/transactional";
+import { sendEmail } from "@/lib/resend";
 
 function page(message: string): NextResponse {
   const html = `<!DOCTYPE html>
@@ -33,6 +36,22 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
       .update(subscribers)
       .set({ status: "subscribed", confirmedAt: new Date() })
       .where(eq(subscribers.id, subscriberId));
+
+    // Owner notification — best-effort, fires once per confirmation. A failure here
+    // must never break the subscriber's confirmation page.
+    try {
+      const settings = await getOrCreateSettings();
+      if (settings.notifyOnNewSubscriber && settings.notifyEmail && settings.fromEmail) {
+        await sendEmail({
+          to: settings.notifyEmail,
+          from: `${settings.fromName} <${settings.fromEmail}>`,
+          subject: "New subscriber",
+          html: newSubscriberNotificationHtml(subscriber.email, subscriber.name),
+        });
+      }
+    } catch {
+      // Swallow — the subscriber's confirmation already succeeded above.
+    }
   }
 
   return page("You're subscribed! Thanks for confirming.");

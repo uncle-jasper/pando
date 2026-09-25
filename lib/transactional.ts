@@ -37,3 +37,31 @@ If you didn't request this, you can safely ignore this email.
 export function confirmUrlFor(token: string): string {
   return `${appUrl()}/confirm/${token}`;
 }
+
+// Owner-facing "you have a new subscriber" notification — sent to settings.notifyEmail,
+// not to the subscriber. Distinct from confirmationEmailHtml above, which goes to the
+// subscriber. Kept deliberately plain (no branding/palette lookup) since it's a personal
+// heads-up, not a piece of the newsletter's public-facing mail.
+export function newSubscriberNotificationHtml(subscriberEmail: string, subscriberName: string | null): string {
+  const who = subscriberName ? `${subscriberName} (${subscriberEmail})` : subscriberEmail;
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>New subscriber</title>
+</head>
+<body style="margin:0;padding:0;background:#f5f0e8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#2c2416;">
+<div style="width:100%;background:#f5f0e8;padding:24px 0;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" align="center" style="max-width:480px;margin:0 auto;background:#ffffff;">
+<tbody><tr><td style="padding:32px;">
+<h1 style="font-size:20px;margin:0 0 16px;">New subscriber</h1>
+<p style="font-size:15px;line-height:1.6;margin:0;">
+${who} just confirmed their subscription.
+</p>
+</td></tr></tbody>
+</table>
+</div>
+</body>
+</html>`;
+}

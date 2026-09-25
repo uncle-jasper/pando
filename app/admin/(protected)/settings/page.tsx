@@ -7,6 +7,8 @@ interface Settings {
   newsletterName: string | null;
   fromEmail: string;
   replyTo: string | null;
+  notifyOnNewSubscriber: boolean;
+  notifyEmail: string | null;
   physicalMailingAddress: string;
     footerTagline: string | null;
   fontFamily: string;
@@ -120,6 +122,29 @@ export default function SettingsPage() {
             className="w-full mt-1 px-2 py-1 border border-[var(--border)] rounded bg-transparent"
           />
         </label>
+        <h2 className="text-sm font-semibold mt-4">New subscriber notifications</h2>
+        <label className="text-sm flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={settings.notifyOnNewSubscriber}
+            onChange={(e) => setSettings({ ...settings, notifyOnNewSubscriber: e.target.checked })}
+          />
+          Email me when someone confirms a new subscription
+        </label>
+        <label className="text-sm">
+          Notification email
+          <input
+            value={settings.notifyEmail || ""}
+            onChange={(e) => setSettings({ ...settings, notifyEmail: e.target.value || null })}
+            placeholder="you@example.com"
+            className="w-full mt-1 px-2 py-1 border border-[var(--border)] rounded bg-transparent"
+          />
+        </label>
+        <p className="text-xs text-[var(--muted)] -mt-1 mb-2">
+          Sent once per subscriber, right after they confirm (not on initial signup). Leave this
+          blank to turn notifications off without unchecking the box above.
+        </p>
+
         <label className="text-sm">
           Physical mailing address
           <input

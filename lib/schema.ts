@@ -5,6 +5,7 @@ import {
   uuid,
   pgEnum,
   integer,
+  boolean,
 } from "drizzle-orm/pg-core";
 
 export const subscriberStatus = pgEnum("subscriber_status", [
@@ -76,6 +77,12 @@ export const settings = pgTable("settings", {
   newsletterName: text("newsletter_name"),
   fromEmail: text("from_email").notNull().default(""),
   replyTo: text("reply_to"),
+  // "New subscriber" owner notification (separate from replyTo, which is subscriber-facing).
+  // Sent only after a subscriber confirms via double opt-in, not on initial signup.
+  // notifyEmail null/empty = notifications are effectively off even if the toggle is on,
+  // since there's nowhere to send them.
+  notifyOnNewSubscriber: boolean("notify_on_new_subscriber").notNull().default(true),
+  notifyEmail: text("notify_email"),
   physicalMailingAddress: text("physical_mailing_address").notNull().default(""),
     // Optional, customizable via Settings UI. Rendered centered in the compliance
     // footer (lib/email.ts), above the fromName/address line. Null/empty = omitted.
