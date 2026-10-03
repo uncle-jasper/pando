@@ -111,7 +111,10 @@ function parseFullBleedTable(lines: string[], startIdx: number): { html: string;
   }
   if (!src) return { html: "", nextIdx: i + 1 };
   const captionRow = alt ? `<tr><td class="full-bleed-caption">${escapeHtml(alt)}</td></tr>` : "";
-      const html = `<table role="presentation" class="full-bleed-table" width="100%" cellpadding="0" cellspacing="0"><tbody><tr><td><img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" class="email-full-bleed" width="600"></td></tr>${captionRow}</tbody></table>\n`;
+      // Wrapped in markers so renderEmailBody can place this table OUTSIDE the padded text
+  // wrapper (full container width). That avoids negative-margin / calc() width tricks, which
+  // some clients (Proton web) strip, leaving the image offset and overflowing one side.
+  const html = `<!--pando-fb--><table role="presentation" class="full-bleed-table" width="100%" cellpadding="0" cellspacing="0"><tbody><tr><td><img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" class="email-full-bleed" width="600"></td></tr>${captionRow}</tbody></table><!--pando-fb-end-->\n`;
   return { html, nextIdx: i + 1 };
 }
 
@@ -254,5 +257,16 @@ export function renderEmailBody(md: string): string {
     html += "</div>\n";
   }
 
-  return html;
+  // Split out the full-bleed tables; every other run of content gets the horizontal padding
+  // wrapper (.email-pad). Full-bleed tables sit directly in the container at full width.
+  const parts = html.split(/<!--pando-fb-->([\s\S]*?)<!--pando-fb-end-->/);
+  let out = "";
+  parts.forEach((part, idx) => {
+    if (idx % 2 === 1) {
+      out += part;
+    } else if (part.trim()) {
+      out += `<div class="email-pad">${part}</div>\n`;
+    }
+  });
+  return out;
 }

@@ -57,7 +57,8 @@ function emailCss(settings: SettingsLike, theme: "light" | "dark" = "light", for
   .email-wrapper { width:100%; background:${bg}; padding: 12px 0; }
   .email-container { max-width:600px; margin:0 auto; background:${bg}; }
   .hero-img { width:100%; height:auto; display:block; border:0; }
-  .email-content { padding: 16px 32px 24px; }
+  .email-content { padding: 16px 0 24px; }
+  .email-pad { padding: 0 32px; }
   .email-h1 { font-size:28px; font-weight:700; margin:0 0 12px; line-height:1.3; }
   .email-h2 { font-size:22px; font-weight:700; margin:20px 0 10px; }
   .email-h3, .email-h4, .email-h5, .email-h6 { font-size:18px; font-weight:700; margin:16px 0 8px; }
@@ -74,7 +75,7 @@ function emailCss(settings: SettingsLike, theme: "light" | "dark" = "light", for
   .gallery-cell { padding:4px; vertical-align:top; }
   .gallery-img { width:100%; height:auto; display:block; border:0; border-radius:4px; }
   .gallery-caption { font-size:12px; color:${muted}; margin-top:4px; }
-  .full-bleed-table { margin: 12px -32px 32px; width: calc(100% + 64px); max-width: calc(100% + 64px); }
+  .full-bleed-table { margin: 12px 0 32px; width: 100%; }
   .email-full-bleed { width:100%; height:auto; display:block; border:0; }
   .full-bleed-caption { font-size:12px; color:${muted}; padding: 4px 32px 0; text-align:center; }
   .email-footnotes { border-top:1px solid ${muted}55; margin-top:20px; padding-top:12px; }
@@ -83,11 +84,10 @@ function emailCss(settings: SettingsLike, theme: "light" | "dark" = "light", for
   .email-footer { padding: 20px 32px; font-size:12px; color:${muted}; text-align:center; }
   .email-footer a { color:${muted}; }
   /* Phones: narrower side padding so the monospace body text gets a usable line length.
-     The full-bleed image offsets must shrink in lockstep with the content padding (16px here),
-     and everything needs !important to beat the inlined base styles. */
+     !important is needed to beat the inlined base styles. Full-bleed images sit outside
+     .email-pad, so they need no matching change. */
   @media only screen and (max-width: 480px) {
-    .email-content { padding: 16px 16px 24px !important; }
-    .full-bleed-table { margin: 12px -16px 32px !important; width: calc(100% + 32px) !important; max-width: calc(100% + 32px) !important; }
+    .email-pad { padding: 0 16px !important; }
     .full-bleed-caption { padding: 4px 16px 0 !important; }
     .email-footer { padding: 20px 16px !important; }
   }
