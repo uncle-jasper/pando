@@ -187,9 +187,16 @@ export function renderEmailBody(md: string): string {
 
     // Pando addition (not in tree): "-# " prefix for a small, muted metadata line — see
     // lib/markdown/parse.ts for the matching browser-preview behavior.
+    // Consecutive "-# " lines are grouped into ONE paragraph with <br> between them, so a
+    // multi-line header (name / volume / date) stacks tightly instead of getting a
+    // paragraph gap between each line.
     if (line.startsWith("-# ")) {
-      html += `<p class="email-meta">${parseInlineEmail(line.slice(3))}</p>\n`;
-      i++;
+      const metaLines: string[] = [];
+      while (i < lines.length && lines[i].startsWith("-# ")) {
+        metaLines.push(parseInlineEmail(lines[i].slice(3)));
+        i++;
+      }
+      html += `<p class="email-meta">${metaLines.join("<br>")}</p>\n`;
       continue;
     }
 

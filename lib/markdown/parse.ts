@@ -170,9 +170,15 @@ export function parseMarkdown(md: string): string {
     // Pando addition (not in tree): "-# " prefix for a small, muted metadata line —
     // e.g. an issue number/date line at the top of a newsletter. Distinct from ">"
     // blockquotes, which render with a border and italics (a pull-quote look, not this).
+    // Consecutive "-# " lines are grouped into ONE paragraph with <br> between them (kept
+    // in sync with lib/markdown/email.ts) so a multi-line header stacks tightly.
     if (line.startsWith("-# ")) {
-      html += `<p class="meta-text" data-source-line="${lineNum}">${parseInline(line.slice(3))}</p>\n`;
-      i++;
+      const metaLines: string[] = [];
+      while (i < lines.length && lines[i].startsWith("-# ")) {
+        metaLines.push(parseInline(lines[i].slice(3)));
+        i++;
+      }
+      html += `<p class="meta-text" data-source-line="${lineNum}">${metaLines.join("<br>")}</p>\n`;
       continue;
     }
 
