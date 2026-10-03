@@ -6,11 +6,12 @@ import Footer from "@/components/Footer";
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-1 min-h-0 flex-col">
-      <nav className="flex items-center gap-4 px-4 py-2 border-b border-[var(--border)] text-sm">
+      <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 border-b border-[var(--border)] text-sm">
         <span className="flex items-center gap-1.5 font-semibold mr-2">
           <img src="/aspen.png" alt="" className="h-5 w-5" />
           Pando
         </span>
+        <Link href="/admin/dashboard">Dashboard</Link>
         <Link href="/admin/campaigns">Campaigns</Link>
         <Link href="/admin/templates">Templates</Link>
         <Link href="/admin/subscribers">Subscribers</Link>

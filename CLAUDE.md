@@ -164,9 +164,8 @@ genuinely necessary, and flag it clearly when that point arrives rather than ass
 - **Settings → From email is currently wrong.** It needs to be `@pando.danbenson.me` (the
   verified subdomain), not `@danbenson.me` (root domain, unverified — sends would fail/lose
   authentication). Dan needs to fix this himself in Settings.
-- **Settings → Reply-To is empty.** Recommend setting it to a real inbox Dan checks (e.g. his
-  Gmail), since the From address doesn't need to be a real mailbox but replies need somewhere to
-  go.
+- **Settings → Reply-To** is set to `newsletter@danbenson.me` (2026-10-03). It works because Dan's
+  Proton catch-all on danbenson.me delivers any address at the domain to his inbox. Nothing to do.
 - Physical mailing address in Settings has been filled in by Dan already ("Taipei, Taiwan") —
   don't overwrite it.
 - **Newsletter page is built but still a Draft** — see "Newsletter page on danbenson.me" below.
@@ -232,8 +231,75 @@ parallel in `lib/markdown/parse.ts` (browser preview) and `lib/markdown/email.ts
   an earlier draft used a literal `\0` byte, which is invisible in editors/grep and dangerous to
   match against, so don't reintroduce that).
 
+## Dashboard (`/admin/dashboard`, the post-login landing page)
+
+Read-only status page: audience counts, 30-day net change, weekly signup bars, last-issue
+delivery stats, and "capacity" gauges against the free-tier limits below, plus plain-language
+warnings when a gauge reaches 70% (amber) or 90% (red). Computed in `lib/dashboard.ts`
+(`getDashboardStats()`), served by `GET /api/admin/dashboard`. No schema changes. The limits
+live in the `LIMITS` constant at the top of `lib/dashboard.ts`; update them if a provider
+changes its plans. Deliberately NO open/click tracking (privacy-first setup, noisy at this size).
+Caveats: "emails sent" counts only newsletter sends (not tests or signup confirmations), so it
+runs slightly low; "photo transfer" is an ESTIMATE (image weight of the latest issue x active
+subscribers x 2 issues/month) because Vercel does not expose transfer to the app.
+
+## Free-tier limits and when to upgrade (verified 2026-10-03)
+
+| Service | Free limit | What happens at the limit | Upgrade |
+|---|---|---|---|
+| Resend | 100 emails/day, 3,000/month | Sends spill over several days (cron resumes them); nothing lost | Pro $20/mo: 50k/mo, no daily cap. Then raise `SEND_BATCH_SIZE` in `lib/sendCampaign.ts` |
+| Vercel Blob (Hobby) | 1 GB storage, 10 GB transfer/month | **Blob access is blocked until the next 30-day cycle: every photo in every email and archive page breaks** | Vercel Pro $20/mo (1 TB Blob transfer included), or move new images to cheaper storage |
+| Vercel Hobby plan | Non-commercial, personal use only | Terms issue, not a technical limit | Pro if the newsletter ever earns money (paid tier, sponsors, ads) |
+| Neon (free) | 1 GB storage, 100 compute hours/month | Text-only data; very unlikely to matter | Pay-as-you-go, a few dollars/month |
+
+Rough sizing: images are resized to 1600px, ~2 MB of photos per issue. 1,000 subscribers x 2 MB
+= ~2 GB per issue (Apple Mail preloads images for its users, so assume nearly everyone counts).
+Fits 10 GB at roughly 500 subscribers comfortably; 1,000 is tight with heavier photos. Worst
+realistic bill at ~1,000 subscribers: ~$40/mo (Resend Pro + Vercel Pro). Escape hatch: the
+Subscribers page exports a CSV, so the list can move to another service (e.g. Buttondown) any time.
+Never delete images that are used in a sent issue (the Images page deletes unconditionally).
+
+## Email layout notes (lib/email.ts, lib/markdown/email.ts)
+
+- Body content is wrapped in `.email-pad` (horizontal padding: 32px, 16px on screens <=480px via a
+  media query). `:::full` images are emitted OUTSIDE `.email-pad` at full container width, using
+  `<!--pando-fb-->` markers that `renderEmailBody` splits on. An earlier version used a negative
+  margin + calc() width to bleed the image past the padding; **Proton Mail web strips that and the
+  image ended up shifted and overflowing one side — don't reintroduce it.**
+- Consecutive `-# ` lines are grouped into ONE paragraph joined with `<br>` (tight stacked masthead).
+  Mirrored in `lib/markdown/parse.ts` for the editor preview. Separate with a blank line for
+  separate paragraphs.
+- Issue structure Dan uses: masthead as `-# ` lines (newsletter name / `Vol. NNN` / `YYYY-MM-DD`),
+  then a `:::full` image (the hero field is left empty), then `# Title`, bold subtitle, body.
+  Keep the `-# Vol. NNN` line in exactly that format: the planned archive reads the volume from it.
+- "Send test" renders with no subscriber, so test emails have no View in browser / Unsubscribe
+  links. Real sends render per subscriber and do include them.
+- Footer text comes from Settings -> footer tagline (raw HTML; use `<br>` for line breaks). Dan keeps
+  it to the tagline only. His "Just hit reply" invitation goes at the end of each issue's body.
+
+## Planned: newsletter archive on danbenson.me (not built yet; Dan wants it ready for Vol. 001)
+
+Decisions made 2026-10-03:
+- Pando exposes a public READ-ONLY feed of campaigns with `status = 'sent'` only (list + single
+  issue body, rendered with no subscriber so no unsubscribe links). No schema change: slug is derived
+  from the title, volume is parsed from the `-# Vol. NNN` line.
+- A small WordPress plugin on danbenson.me renders it server-side (PHP, short cache) inside the site
+  theme: archive list below the existing intro + signup form on `/newsletter`, and one page per
+  issue. Not blog posts. EasyWP/Nginx, plugin uploaded once in wp-admin.
+- URL style: `/newsletter/vol-001-library-surfing-in-banqiao`; lookup uses ONLY the `vol-001` part so
+  fixing a title typo never breaks links (redirect to the corrected slug).
+- List entries: 3:2 thumbnail (first image in the issue) + `Vol. 001 · 2026-10-18` + title. Generate
+  a small (~400px) thumbnail at upload time so archive pages stay light on Blob transfer.
+- Hide the "Past issues" heading until the first issue is sent, so installing the plugin early
+  changes nothing visible. Issues appear in the archive immediately when sent.
+- Issue pages: Vol./date header, full text and photos at reading width, signup form under each issue,
+  prev / next / all-issues links.
+- Later: make `/p/[campaignId]` (the view-in-browser link in already-sent emails) 301-redirect to the
+  matching danbenson.me issue, so old emails keep working. Until then it keeps serving from Pando.
+
 ## Useful entry points
 
+- `lib/dashboard.ts` / `/admin/dashboard` — usage + capacity stats and warnings
 - `lib/sendCampaign.ts` — the actual send loop (batching, concurrency, idempotency)
 - `lib/email.ts` — renders the real email HTML (light/dark theme support via `theme` param)
 - `lib/markdown/email.ts` vs `lib/markdown/parse.ts` — two render paths, one for email (table

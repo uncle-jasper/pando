@@ -21,7 +21,7 @@ export default function LoginPage() {
     });
     setLoading(false);
     if (res.ok) {
-      router.push("/admin/campaigns");
+      router.push("/admin/dashboard");
       router.refresh();
     } else {
       const body = await res.json().catch(() => ({}));
