@@ -74,7 +74,7 @@ function emailCss(settings: SettingsLike, theme: "light" | "dark" = "light", for
   .gallery-cell { padding:4px; vertical-align:top; }
   .gallery-img { width:100%; height:auto; display:block; border:0; border-radius:4px; }
   .gallery-caption { font-size:12px; color:${muted}; margin-top:4px; }
-  .full-bleed-table { margin: 12px -32px 32px; width: calc(100% + 64px) !important; max-width: calc(100% + 64px) !important; }
+  .full-bleed-table { margin: 12px -32px 32px; width: calc(100% + 64px); max-width: calc(100% + 64px); }
   .email-full-bleed { width:100%; height:auto; display:block; border:0; }
   .full-bleed-caption { font-size:12px; color:${muted}; padding: 4px 32px 0; text-align:center; }
   .email-footnotes { border-top:1px solid ${muted}55; margin-top:20px; padding-top:12px; }
@@ -82,6 +82,15 @@ function emailCss(settings: SettingsLike, theme: "light" | "dark" = "light", for
   .preheader { display:none !important; visibility:hidden; opacity:0; height:0; width:0; overflow:hidden; mso-hide:all; }
   .email-footer { padding: 20px 32px; font-size:12px; color:${muted}; text-align:center; }
   .email-footer a { color:${muted}; }
+  /* Phones: narrower side padding so the monospace body text gets a usable line length.
+     The full-bleed image offsets must shrink in lockstep with the content padding (16px here),
+     and everything needs !important to beat the inlined base styles. */
+  @media only screen and (max-width: 480px) {
+    .email-content { padding: 16px 16px 24px !important; }
+    .full-bleed-table { margin: 12px -16px 32px !important; width: calc(100% + 32px) !important; max-width: calc(100% + 32px) !important; }
+    .full-bleed-caption { padding: 4px 16px 0 !important; }
+    .email-footer { padding: 20px 16px !important; }
+  }
 ${
   theme === "light" && !forceTheme
     ? `
