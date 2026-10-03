@@ -277,7 +277,7 @@ Never delete images that are used in a sent issue (the Images page deletes uncon
 - Footer text comes from Settings -> footer tagline (raw HTML; use `<br>` for line breaks). Dan keeps
   it to the tagline only. His "Just hit reply" invitation goes at the end of each issue's body.
 
-## Newsletter archive on danbenson.me (built; plugin NOT yet installed on the live site)
+## Newsletter archive on danbenson.me (built; plugin installed + activated on live site 2026-10-03, dormant until Vol. 1 is sent)
 
 Status: Pando feed is live (`/api/public/issues`, `/api/public/issues/[vol]`, `lib/issues.ts`). WordPress
 plugin is in `wordpress-plugin/three-stops-archive/` (tested locally on SQLite WordPress with a mock
