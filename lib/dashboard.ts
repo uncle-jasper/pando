@@ -2,6 +2,7 @@ import { count, desc, eq, gte, inArray, lt, and, sql } from "drizzle-orm";
 import { db } from "./db";
 import { campaigns, images, sends, subscribers } from "./schema";
 import { SEND_BATCH_SIZE } from "./sendCampaign";
+import { parseVolume } from "./issues";
 
 // Free-tier ceilings the dashboard measures against. Keep in sync with the "Free-tier limits"
 // section of CLAUDE.md; if a provider changes its limits, change them here.
@@ -249,6 +250,11 @@ export async function getDashboardStats(): Promise<DashboardStats> {
         ? "Resend Pro ($20/mo) lifts the daily cap and raises the monthly one to 50,000."
         : "Neon's paid plan is pay-as-you-go, usually a few dollars a month.";
     warnings.push(`${g.label}: ${Math.round(g.pct)}% of the free limit. ${tail}`);
+  }
+  if (estimateSource && !parseVolume(estimateSource.markdownBody)) {
+    warnings.push(
+      `${last ? "The last issue" : "The latest draft"} has no "-# Vol. NNN" line, so it won't appear in the website archive. Add one (for example "-# Vol. 002") to the masthead.`
+    );
   }
   const bad = (byStatus["bounced"] ?? 0) + (byStatus["complained"] ?? 0);
   if (bad > 0 && subscribed > 0 && bad / (subscribed + bad) > 0.02) {
