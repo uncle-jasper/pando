@@ -277,7 +277,16 @@ Never delete images that are used in a sent issue (the Images page deletes uncon
 - Footer text comes from Settings -> footer tagline (raw HTML; use `<br>` for line breaks). Dan keeps
   it to the tagline only. His "Just hit reply" invitation goes at the end of each issue's body.
 
-## Planned: newsletter archive on danbenson.me (not built yet; Dan wants it ready for Vol. 001)
+## Newsletter archive on danbenson.me (built; plugin NOT yet installed on the live site)
+
+Status: Pando feed is live (`/api/public/issues`, `/api/public/issues/[vol]`, `lib/issues.ts`). WordPress
+plugin is in `wordpress-plugin/three-stops-archive/` (tested locally on SQLite WordPress with a mock
+feed: list, issue pages, 301 to canonical slug, 404, empty feed, feed-down fallback to last good copy).
+Install: zip that folder, wp-admin → Plugins → Add New → Upload → Activate, then Settings → Permalinks →
+Save (flushes rewrites). It shows nothing until an issue with a `-# Vol. NNN` line has status `sent`.
+Plugin constants (`TSM_PANDO_URL` etc.) can be overridden in wp-config.php.
+
+Original decisions, 2026-10-03:
 
 Decisions made 2026-10-03:
 - Pando exposes a public READ-ONLY feed of campaigns with `status = 'sent'` only (list + single
@@ -288,8 +297,9 @@ Decisions made 2026-10-03:
   issue. Not blog posts. EasyWP/Nginx, plugin uploaded once in wp-admin.
 - URL style: `/newsletter/vol-001-library-surfing-in-banqiao`; lookup uses ONLY the `vol-001` part so
   fixing a title typo never breaks links (redirect to the corrected slug).
-- List entries: 3:2 thumbnail (first image in the issue) + `Vol. 001 · 2026-10-18` + title. Generate
-  a small (~400px) thumbnail at upload time so archive pages stay light on Blob transfer.
+- List entries: 3:2 thumbnail (first image in the issue) + `Vol. 001 · October 18, 2026` + title.
+  Thumbnails are served through Next's image optimizer (`/_next/image`, 640px; `next.config.ts`
+  allow-lists the Blob host), not generated at upload time, so they're cached on Vercel's CDN.
 - Hide the "Past issues" heading until the first issue is sent, so installing the plugin early
   changes nothing visible. Issues appear in the archive immediately when sent.
 - Issue pages: Vol./date header, full text and photos at reading width, signup form under each issue,
