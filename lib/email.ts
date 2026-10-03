@@ -54,17 +54,17 @@ function emailCss(settings: SettingsLike, theme: "light" | "dark" = "light", for
 
   return `
   body { margin:0; padding:0; background:${bg}; font-family:${settings.fontFamily}; color:${text}; }
-  .email-wrapper { width:100%; background:${bg}; padding: 24px 0; }
+  .email-wrapper { width:100%; background:${bg}; padding: 12px 0; }
   .email-container { max-width:600px; margin:0 auto; background:${bg}; }
   .hero-img { width:100%; height:auto; display:block; border:0; }
-  .email-content { padding: 24px 32px; }
+  .email-content { padding: 16px 32px 24px; }
   .email-h1 { font-size:28px; font-weight:700; margin:0 0 12px; line-height:1.3; }
   .email-h2 { font-size:22px; font-weight:700; margin:20px 0 10px; }
   .email-h3, .email-h4, .email-h5, .email-h6 { font-size:18px; font-weight:700; margin:16px 0 8px; }
   .email-p { font-size:16px; line-height:1.6; margin:0 0 14px; }
   .email-list { font-size:16px; line-height:1.6; margin:0 0 14px; padding-left:24px; }
   .email-blockquote { border-left:3px solid ${muted}; padding:4px 0 4px 16px; color:${muted}; font-style:italic; margin:0 0 14px; }
-  .email-meta { font-size:12px; color:${muted}; margin:0 0 14px; }
+  .email-meta { font-size:12px; line-height:1.5; color:${muted}; margin:0 0 14px; }
   .email-pre { background:${muted}22; padding:12px 16px; border-radius:6px; overflow-x:auto; margin:0 0 14px; font-family: 'Courier New', monospace; font-size:14px; }
   .email-hr { border:none; border-top:1px solid ${muted}55; margin:20px 0; }
   .email-link { color:${text}; text-decoration:underline; }
