@@ -102,12 +102,16 @@ function parseGalleryTable(
         return `<tr>${row
           .map((img, idx) => {
             const pct = (ratios[idx] / sumRatio) * 100;
-            // Photos link to their own full-resolution file (up to 1600px — see
-            // lib/client-image-resize.ts) so a reader can tap/click to see it larger
-            // than the gallery cell shows it.
-            return `<td class="gallery-cell" width="${pct.toFixed(2)}%"><a href="${escapeHtml(img.src)}" target="_blank" rel="noopener" class="gallery-link"><img src="${escapeHtml(img.src)}" alt="${escapeHtml(
+            // NOTE: this used to wrap each <img> in an <a href="{own src}"> so tapping opened
+            // the full-resolution file. Pulled out (temporarily, for testing) because two
+            // photos landing in the same row — each in its own <a style="display:block"> inside
+            // a percentage-width <td> — correlates exactly with reports of the second photo in a
+            // 3-photo gallery silently vanishing in both Gmail and Proton, even though the HTML
+            // itself (checked via "view source" on a real send) was complete and well-formed.
+            // Re-add once that's confirmed as the actual cause and a safer pattern is worked out.
+            return `<td class="gallery-cell" width="${pct.toFixed(2)}%"><img src="${escapeHtml(img.src)}" alt="${escapeHtml(
               img.alt
-            )}" class="gallery-img--justified"></a>${img.alt ? `<div class="gallery-caption">${escapeHtml(img.alt)}</div>` : ""}</td>`;
+            )}" class="gallery-img--justified">${img.alt ? `<div class="gallery-caption">${escapeHtml(img.alt)}</div>` : ""}</td>`;
           })
           .join("")}</tr>`;
       }
@@ -115,9 +119,9 @@ function parseGalleryTable(
       return `<tr>${row
         .map(
           (img) =>
-            `<td class="gallery-cell" width="${cellWidth}%"><a href="${escapeHtml(img.src)}" target="_blank" rel="noopener" class="gallery-link"><img src="${escapeHtml(img.src)}" alt="${escapeHtml(
+            `<td class="gallery-cell" width="${cellWidth}%"><img src="${escapeHtml(img.src)}" alt="${escapeHtml(
               img.alt
-            )}" class="gallery-img"></a>${img.alt ? `<div class="gallery-caption">${escapeHtml(img.alt)}</div>` : ""}</td>`
+            )}" class="gallery-img">${img.alt ? `<div class="gallery-caption">${escapeHtml(img.alt)}</div>` : ""}</td>`
         )
         .join("")}</tr>`;
     })
