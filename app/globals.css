@@ -100,7 +100,9 @@ body {
   margin: 0.8em 0;
 }
 .pando-preview .gallery-item { margin: 0; }
-.pando-preview .gallery-item img { width: 100%; height: auto; display: block; border-radius: 4px; }
+/* Crop every gallery photo to a uniform square so mixed portrait/landscape shots line up
+   in a row instead of leaving ragged heights (object-fit crops, aspect-ratio sets the box). */
+.pando-preview .gallery-item img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: block; border-radius: 4px; }
 .pando-preview .gallery-item figcaption { font-size: 0.8em; color: var(--muted); margin-top: 4px; }
 
 .pando-preview .hero-image { width: 100%; height: auto; display: block; border-radius: 6px; margin-bottom: 1em; }

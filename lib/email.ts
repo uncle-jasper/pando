@@ -72,7 +72,7 @@ function emailCss(settings: SettingsLike, theme: "light" | "dark" = "light", for
   .email-image-caption { display:block; font-size:12px; color:${muted}; margin-top:4px; text-align:center; }
   .gallery-table { margin: 10px 0; }
   .gallery-cell { padding:4px; vertical-align:top; }
-  .gallery-img { width:100%; height:auto; display:block; border:0; border-radius:4px; }
+  .gallery-img { width:100%; aspect-ratio:1/1; object-fit:cover; display:block; border:0; border-radius:4px; }
   .gallery-caption { font-size:12px; color:${muted}; margin-top:4px; }
   .full-bleed-table { margin: 12px -32px; width: calc(100% + 64px) !important; max-width: calc(100% + 64px) !important; }
   .email-full-bleed { width:100%; height:auto; display:block; border:0; }
