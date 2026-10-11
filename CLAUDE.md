@@ -216,11 +216,18 @@ danbenson.me itself (WordPress) — **now built**:
 Pando's editor is standard markdown plus a few extensions not in tree's parser, implemented in
 parallel in `lib/markdown/parse.ts` (browser preview) and `lib/markdown/email.ts` (email render):
 
-- **`:::gallery` ... `:::`** — a fenced block of `![caption](url)` lines, rendered as a real CSS
-  grid in the browser preview and an HTML table grid in email (email clients don't support
-  grid/flexbox reliably). This is also the only way to get a *visible* image caption today —
-  a plain inline `![caption](url)` outside a gallery block only sets the `alt` attribute, which
-  isn't shown on-page.
+- **`:::gallery` ... `:::`** — a fenced block of `![caption](url)` lines, laid out with **no
+  cropping**: each photo's real width/height (stored on the `images` table at upload, see
+  `lib/imageDimensions.ts`) sets its share of the row, so photos in a row end up the same height.
+  Browser preview uses a flex-grow trick; email computes literal `<td width="%">` values. If any
+  photo in a gallery has unknown dimensions, the whole gallery falls back to equal-width
+  square-cropped cells. Email rows are 2 photos wide; an odd last photo sits centered on its own
+  row. Photos link to their own full-size file (click to enlarge). Captions come from the alt text.
+  **Email gotcha — keep one `<table>` per gallery row.** Table cells in the same column share one
+  width across every row. A single table with a two-cell row followed by a one-cell `width="100%"`
+  row squeezes the second photo of row 1 to 0x0 (it silently vanishes in Gmail and Proton while
+  the HTML looks complete). Found by measuring rendered boxes in Chromium; don't merge rows back
+  into one table.
 - **`-# text`** — a small, muted metadata line (e.g. `-# Issue #12 — July 18, 2026` at the top of
   an issue). Renders as `.meta-text` / `.email-meta`, distinct from `>` blockquotes (which have a
   left border and italics — a pull-quote look, not a subtle caption).
