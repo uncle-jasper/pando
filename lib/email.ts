@@ -174,7 +174,14 @@ ${settings.footerTagline ? `${settings.footerTagline}<br>` : ""}${settings.physi
 </body>
 </html>`;
 
-  return juice(html, { preserveMediaQueries: true });
+  // applyWidthAttributes/applyHeightAttributes (on by default) copy a CSS width/height
+  // value onto the matching HTML attribute for old clients that ignore CSS. That's fine for
+  // pixel values, but every gallery/justified image uses height:auto (so its aspect ratio
+  // follows whatever width the cell gets) — juice was copying that literally, producing
+  // height="auto" HTML attributes, which isn't a legal value there (the attribute wants a
+  // number) and some stricter renderers can choke on. Turned off; width:100%/height:auto
+  // already reaches every client through the inlined style attribute itself.
+  return juice(html, { preserveMediaQueries: true, applyWidthAttributes: false, applyHeightAttributes: false });
 }
 
 export function unsubscribeHeaders(subscriberId: string) {
