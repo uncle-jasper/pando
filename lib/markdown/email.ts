@@ -76,7 +76,9 @@ function parseGalleryTable(
     i++;
   }
 
-  const cols = images.length >= 3 ? 3 : Math.max(images.length, 1);
+  // Capped at 2 per row (not 3) so each photo renders at a usable size in an inbox —
+  // 3 across a 600px-wide email container left each photo only ~170px wide.
+  const cols = images.length >= 2 ? 2 : 1;
   const rows: (typeof images)[] = [];
   for (let r = 0; r < images.length; r += cols) rows.push(images.slice(r, r + cols));
 
@@ -100,9 +102,12 @@ function parseGalleryTable(
         return `<tr>${row
           .map((img, idx) => {
             const pct = (ratios[idx] / sumRatio) * 100;
-            return `<td class="gallery-cell" width="${pct.toFixed(2)}%"><img src="${escapeHtml(img.src)}" alt="${escapeHtml(
+            // Photos link to their own full-resolution file (up to 1600px — see
+            // lib/client-image-resize.ts) so a reader can tap/click to see it larger
+            // than the gallery cell shows it.
+            return `<td class="gallery-cell" width="${pct.toFixed(2)}%"><a href="${escapeHtml(img.src)}" target="_blank" rel="noopener" class="gallery-link"><img src="${escapeHtml(img.src)}" alt="${escapeHtml(
               img.alt
-            )}" class="gallery-img--justified">${img.alt ? `<div class="gallery-caption">${escapeHtml(img.alt)}</div>` : ""}</td>`;
+            )}" class="gallery-img--justified"></a>${img.alt ? `<div class="gallery-caption">${escapeHtml(img.alt)}</div>` : ""}</td>`;
           })
           .join("")}</tr>`;
       }
@@ -110,9 +115,9 @@ function parseGalleryTable(
       return `<tr>${row
         .map(
           (img) =>
-            `<td class="gallery-cell" width="${cellWidth}%"><img src="${escapeHtml(img.src)}" alt="${escapeHtml(
+            `<td class="gallery-cell" width="${cellWidth}%"><a href="${escapeHtml(img.src)}" target="_blank" rel="noopener" class="gallery-link"><img src="${escapeHtml(img.src)}" alt="${escapeHtml(
               img.alt
-            )}" class="gallery-img">${img.alt ? `<div class="gallery-caption">${escapeHtml(img.alt)}</div>` : ""}</td>`
+            )}" class="gallery-img"></a>${img.alt ? `<div class="gallery-caption">${escapeHtml(img.alt)}</div>` : ""}</td>`
         )
         .join("")}</tr>`;
     })

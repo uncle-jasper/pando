@@ -62,7 +62,7 @@ function emailCss(settings: SettingsLike, theme: "light" | "dark" = "light", for
   .email-h1 { font-size:28px; font-weight:700; margin:0 0 12px; line-height:1.3; }
   .email-h2 { font-size:22px; font-weight:700; margin:20px 0 10px; }
   .email-h3, .email-h4, .email-h5, .email-h6 { font-size:18px; font-weight:700; margin:16px 0 8px; }
-  .email-p { font-size:16px; line-height:1.6; margin:0 0 14px; }
+  .email-p { font-size:16px; line-height:1.6; margin:0 0 20px; }
   .email-list { font-size:16px; line-height:1.6; margin:0 0 14px; padding-left:24px; }
   .email-blockquote { border-left:3px solid ${muted}; padding:4px 0 4px 16px; color:${muted}; font-style:italic; margin:0 0 14px; }
   .email-meta { font-size:12px; line-height:1.5; color:${muted}; margin:0 0 14px; }
@@ -72,7 +72,8 @@ function emailCss(settings: SettingsLike, theme: "light" | "dark" = "light", for
   .email-img { max-width:100%; display:block; border:0; margin: 10px 0; }
   .email-image-caption { display:block; font-size:12px; color:${muted}; margin-top:4px; text-align:center; }
   .gallery-table { margin: 10px 0; }
-  .gallery-cell { padding:4px; vertical-align:top; }
+  .gallery-cell { padding:4px; vertical-align:middle; }
+  .gallery-link { display:block; text-decoration:none; }
   .gallery-img { width:100%; aspect-ratio:1/1; object-fit:cover; display:block; border:0; border-radius:4px; }
   .gallery-img--justified { width:100%; height:auto; display:block; border:0; border-radius:4px; }
   .gallery-caption { font-size:12px; color:${muted}; margin-top:4px; }
