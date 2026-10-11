@@ -76,9 +76,18 @@ function parseGalleryTable(
     i++;
   }
 
-  // Capped at 2 per row (not 3) so each photo renders at a usable size in an inbox —
-  // 3 across a 600px-wide email container left each photo only ~170px wide.
-  const cols = images.length >= 2 ? 2 : 1;
+  // TEMPORARY revert to test a theory: every "photo went missing in the actual email"
+  // report so far has been a 3-photo gallery split into a row of 2 + a row of 1 (the
+  // consequence of capping rows at 2 photos below) — and it's consistently the second
+  // cell of the 2-cell row that disappears, in both Gmail and Proton, despite the
+  // generated HTML (checked via "view source" on a real send) being complete and
+  // well-formed. Before this row-splitting existed, a 3-photo gallery was always a
+  // single <tr> with 3 <td>s and never lost a photo. Testing whether a <tr> with a
+  // different cell count immediately followed by another <tr> with a different cell
+  // count is itself what these clients choke on. Back to cols=3 while that's confirmed
+  // — this makes photos smaller again (the original complaint), so it needs a different
+  // fix once the cause is nailed down, not a return to this.
+  const cols = images.length >= 3 ? 3 : Math.max(images.length, 1);
   const rows: (typeof images)[] = [];
   for (let r = 0; r < images.length; r += cols) rows.push(images.slice(r, r + cols));
 
