@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { parseMarkdown, type GalleryDimensions } from "@/lib/markdown/parse";
+import { FOOTER_REASON } from "@/lib/footer";
 
 interface PreviewProps {
   markdown: string;
@@ -31,7 +32,7 @@ export default function Preview({ markdown, heroImageUrl, heroImageAlt, dimensio
   }, []);
 
   const footerHtml = footer
-  ? [footer.footerTagline || "", footer.physicalMailingAddress, `<span style="text-decoration: underline;">View in browser</span> &middot; <span style="text-decoration: underline;">Unsubscribe</span>`].filter(Boolean).join("<br>")
+    ? `${[footer.footerTagline || "", footer.physicalMailingAddress].filter(Boolean).join("<br>")}<div style="width:32px;border-top:1px solid var(--muted);margin:16px auto"></div>${FOOTER_REASON}<br><span style="text-decoration: underline;">View in browser</span> &middot; <span style="text-decoration: underline;">Unsubscribe</span>`
     : "";
 
   return (

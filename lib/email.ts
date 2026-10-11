@@ -1,4 +1,5 @@
  import juice from "juice";
+import { FOOTER_REASON } from "./footer";
 import { renderEmailBody, type GalleryDimensions } from "./markdown/email";
 import { makeSubscriberToken } from "./tokens";
 
@@ -85,6 +86,7 @@ function emailCss(settings: SettingsLike, theme: "light" | "dark" = "light", for
   .preheader { display:none !important; visibility:hidden; opacity:0; height:0; width:0; overflow:hidden; mso-hide:all; }
   .email-footer { padding: 20px 32px; font-size:12px; color:${muted}; text-align:center; }
   .email-footer a { color:${muted}; }
+  .footer-rule { width:32px; height:0; border-top:1px solid ${muted}99; margin:16px auto; }
   /* Phones: narrower side padding so the monospace body text gets a usable line length.
      !important is needed to beat the inlined base styles. Full-bleed images sit outside
      .email-pad, so they need no matching change. */
@@ -102,6 +104,7 @@ ${
       color:${settings.darkText} !important;
     }
     .email-blockquote { color:${settings.darkMuted} !important; border-left-color:${settings.darkMuted} !important; }
+    .footer-rule { border-top-color:${settings.darkMuted} !important; }
     .email-footer, .email-footer a, .email-footnote, .gallery-caption, .email-meta , .email-image-caption, .full-bleed-caption{ color:${settings.darkMuted} !important; }
     .email-pre { background:${settings.darkMuted}33 !important; }
   }`
@@ -144,6 +147,14 @@ export function renderEmailHtml(
       ? `<span style="text-decoration:underline">View in browser</span> &middot; <span style="text-decoration:underline">Unsubscribe</span>`
         : "";
 
+  // Top block (tagline + address), then a short divider, then the "why you're getting this"
+  // note and the links. The note and divider only appear when there's a real or preview
+  // subscriber; the public browser page just gets the top block.
+  const footerTop = `${settings.footerTagline ? `${settings.footerTagline}<br>` : ""}${settings.physicalMailingAddress}`;
+  const footerReason = subscriber || previewMode ? FOOTER_REASON : "";
+  const footerBottom = [footerReason, footerLinks].filter(Boolean).join("<br>");
+  const footerHtml = footerBottom ? `${footerTop}<div class="footer-rule"></div>${footerBottom}` : footerTop;
+
   const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -165,7 +176,7 @@ ${heroHtml}
 ${bodyHtml}
 </div>
 <div class="email-footer">
-${settings.footerTagline ? `${settings.footerTagline}<br>` : ""}${settings.physicalMailingAddress}${footerLinks ? `<br>${footerLinks}` : ""}
+${footerHtml}
 </div>
 </td></tr>
 </tbody>
