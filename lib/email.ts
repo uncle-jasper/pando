@@ -54,17 +54,18 @@ function emailCss(settings: SettingsLike, theme: "light" | "dark" = "light", for
 
   return `
   body { margin:0; padding:0; background:${bg}; font-family:${settings.fontFamily}; color:${text}; }
-  .email-wrapper { width:100%; background:${bg}; padding: 24px 0; }
+  .email-wrapper { width:100%; background:${bg}; padding: 12px 0; }
   .email-container { max-width:600px; margin:0 auto; background:${bg}; }
   .hero-img { width:100%; height:auto; display:block; border:0; }
-  .email-content { padding: 24px 32px; }
+  .email-content { padding: 16px 0 24px; }
+  .email-pad { padding: 0 32px; }
   .email-h1 { font-size:28px; font-weight:700; margin:0 0 12px; line-height:1.3; }
   .email-h2 { font-size:22px; font-weight:700; margin:20px 0 10px; }
   .email-h3, .email-h4, .email-h5, .email-h6 { font-size:18px; font-weight:700; margin:16px 0 8px; }
   .email-p { font-size:16px; line-height:1.6; margin:0 0 14px; }
   .email-list { font-size:16px; line-height:1.6; margin:0 0 14px; padding-left:24px; }
   .email-blockquote { border-left:3px solid ${muted}; padding:4px 0 4px 16px; color:${muted}; font-style:italic; margin:0 0 14px; }
-  .email-meta { font-size:12px; color:${muted}; margin:0 0 14px; }
+  .email-meta { font-size:12px; line-height:1.5; color:${muted}; margin:0 0 14px; }
   .email-pre { background:${muted}22; padding:12px 16px; border-radius:6px; overflow-x:auto; margin:0 0 14px; font-family: 'Courier New', monospace; font-size:14px; }
   .email-hr { border:none; border-top:1px solid ${muted}55; margin:20px 0; }
   .email-link { color:${text}; text-decoration:underline; }
@@ -75,7 +76,7 @@ function emailCss(settings: SettingsLike, theme: "light" | "dark" = "light", for
   .gallery-img { width:100%; aspect-ratio:1/1; object-fit:cover; display:block; border:0; border-radius:4px; }
   .gallery-img--justified { width:100%; height:auto; display:block; border:0; border-radius:4px; }
   .gallery-caption { font-size:12px; color:${muted}; margin-top:4px; }
-  .full-bleed-table { margin: 12px -32px; width: calc(100% + 64px) !important; max-width: calc(100% + 64px) !important; }
+  .full-bleed-table { margin: 12px 0 32px; width: 100%; }
   .email-full-bleed { width:100%; height:auto; display:block; border:0; }
   .full-bleed-caption { font-size:12px; color:${muted}; padding: 4px 32px 0; text-align:center; }
   .email-footnotes { border-top:1px solid ${muted}55; margin-top:20px; padding-top:12px; }
@@ -83,6 +84,14 @@ function emailCss(settings: SettingsLike, theme: "light" | "dark" = "light", for
   .preheader { display:none !important; visibility:hidden; opacity:0; height:0; width:0; overflow:hidden; mso-hide:all; }
   .email-footer { padding: 20px 32px; font-size:12px; color:${muted}; text-align:center; }
   .email-footer a { color:${muted}; }
+  /* Phones: narrower side padding so the monospace body text gets a usable line length.
+     !important is needed to beat the inlined base styles. Full-bleed images sit outside
+     .email-pad, so they need no matching change. */
+  @media only screen and (max-width: 480px) {
+    .email-pad { padding: 0 16px !important; }
+    .full-bleed-caption { padding: 4px 16px 0 !important; }
+    .email-footer { padding: 20px 16px !important; }
+  }
 ${
   theme === "light" && !forceTheme
     ? `
