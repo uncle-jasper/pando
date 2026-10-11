@@ -5,7 +5,7 @@ import { resizeImageFile } from "@/lib/client-image-resize";
 
 interface ImageUploadButtonProps {
   label: string;
-  onUploaded: (url: string) => void;
+  onUploaded: (image: { url: string; width: number | null; height: number | null }) => void;
   className?: string;
 }
 
@@ -23,12 +23,14 @@ export default function ImageUploadButton({ label, onUploaded, className }: Imag
     try {
       const resized = await resizeImageFile(file);
       const formData = new FormData();
-      formData.append("file", resized);
+      formData.append("file", resized.file);
+      formData.append("width", String(resized.width));
+      formData.append("height", String(resized.height));
 
       const res = await fetch("/api/admin/uploads", { method: "POST", body: formData });
       if (res.ok) {
         const row = await res.json();
-        onUploaded(row.url);
+        onUploaded({ url: row.url, width: row.width ?? null, height: row.height ?? null });
       } else {
         const body = await res.json().catch(() => ({}));
         setError(body.error || "Upload failed.");

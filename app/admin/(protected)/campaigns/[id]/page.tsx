@@ -6,10 +6,12 @@ import { useRouter } from "next/navigation";
 import Editor, { type EditorHandle } from "@/components/Editor";
 import Preview from "@/components/Preview";
 import ImageUploadButton from "@/components/ImageUploadButton";
-import GalleryUploadButton from "@/components/GalleryUploadButton";
+import GalleryUploadButton, { type UploadedImage } from "@/components/GalleryUploadButton";
+import ImagePickerModal, { type PickedImage } from "@/components/ImagePickerModal";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import StatusLine from "@/components/StatusLine";
 import EmailPreviewModal from "@/components/EmailPreviewModal";
+import type { GalleryDimensions } from "@/lib/markdown/parse";
 
 interface Campaign {
   id: string;
@@ -37,6 +39,14 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
   const [sending, setSending] = useState(false);
   const [sendStatus, setSendStatus] = useState<{ message: string; tone: "info" | "error" | "success" } | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  // Real dimensions for every uploaded image, keyed by URL — feeds the Preview pane's
+  // no-crop gallery layout (see GalleryDimensions in lib/markdown/parse.ts). Seeded from
+  // the full image library on load, then kept current as new images get uploaded/picked
+  // so a gallery inserted mid-session doesn't need a refetch to lay out correctly.
+  const [dimensions, setDimensions] = useState<GalleryDimensions>({});
+  // Which upload target a click on "Choose existing" was for, so the picker's result goes
+  // to the right place: a single hero image, a single inline image, or several gallery photos.
+  const [pickerTarget, setPickerTarget] = useState<"hero" | "inline" | "gallery" | null>(null);
   const editorRef = useRef<EditorHandle>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Accumulates fields across calls so editing e.g. the title and then quickly the body
@@ -61,7 +71,24 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
       .then((rows: { status: string }[]) => {
         setSubscribedCount(rows.filter((r) => r.status === "subscribed").length);
       });
+    fetch("/api/admin/images")
+      .then((r) => r.json())
+      .then((rows: { url: string; width: number | null; height: number | null }[]) => {
+        mergeDimensions(rows);
+      });
   }, [id]);
+
+  // Folds newly-known image dimensions into state without dropping what's already there —
+  // called after the initial library fetch above and after every upload/picker selection.
+  function mergeDimensions(imgs: { url: string; width: number | null; height: number | null }[]) {
+    const additions: GalleryDimensions = {};
+    for (const img of imgs) {
+      if (img.width && img.height) additions[img.url] = { width: img.width, height: img.height };
+    }
+    if (Object.keys(additions).length > 0) {
+      setDimensions((prev) => ({ ...prev, ...additions }));
+    }
+  }
 
   function scheduleSave(patch: Record<string, unknown>) {
     Object.assign(pendingPatch.current, patch);
@@ -97,9 +124,10 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
     scheduleSave({ title: text });
   }
 
-  function handleHeroUploaded(url: string) {
-    setHeroImageUrl(url);
-    scheduleSave({ heroImageUrl: url });
+  function handleHeroUploaded(image: { url: string; width: number | null; height: number | null }) {
+    mergeDimensions([image]);
+    setHeroImageUrl(image.url);
+    scheduleSave({ heroImageUrl: image.url });
   }
 
   function handleHeroRemove() {
@@ -107,13 +135,29 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
     scheduleSave({ heroImageUrl: null });
   }
 
-  function handleImageInsert(url: string) {
-    editorRef.current?.insertAtCursor(`![](${url})`);
+  function handleImageInsert(image: { url: string; width: number | null; height: number | null }) {
+    mergeDimensions([image]);
+    editorRef.current?.insertAtCursor(`![](${image.url})`);
   }
 
-  function handleGalleryInsert(urls: string[]) {
-    const block = `\n:::gallery\n${urls.map((u) => `![](${u})`).join("\n")}\n:::\n`;
+  function handleGalleryInsert(images: UploadedImage[]) {
+    mergeDimensions(images);
+    const block = `\n:::gallery\n${images.map((img) => `![](${img.url})`).join("\n")}\n:::\n`;
     editorRef.current?.insertAtCursor(block);
+  }
+
+  // Result from "Choose existing" — routes to whichever upload target opened the picker.
+  function handlePickerSelect(images: PickedImage[]) {
+    mergeDimensions(images);
+    if (pickerTarget === "hero" && images[0]) {
+      setHeroImageUrl(images[0].url);
+      scheduleSave({ heroImageUrl: images[0].url });
+    } else if (pickerTarget === "inline" && images[0]) {
+      handleImageInsert(images[0]);
+    } else if (pickerTarget === "gallery") {
+      handleGalleryInsert(images);
+    }
+    setPickerTarget(null);
   }
 
   async function handleDropFiles(files: File[], pos: number) {
@@ -122,10 +166,13 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
       try {
         const resized = await resizeImageFile(file);
         const formData = new FormData();
-        formData.append("file", resized);
+        formData.append("file", resized.file);
+        formData.append("width", String(resized.width));
+        formData.append("height", String(resized.height));
         const res = await fetch("/api/admin/uploads", { method: "POST", body: formData });
         if (!res.ok) continue;
         const row = await res.json();
+        mergeDimensions([row]);
         const markdown = `![](${row.url})\n`;
         editorRef.current?.insertAt(insertPos, markdown);
         insertPos += markdown.length;
@@ -224,7 +271,15 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
             </button>
           </span>
         ) : (
-          <ImageUploadButton label="Add hero image" onUploaded={handleHeroUploaded} />
+          <span className="flex items-center gap-1">
+            <ImageUploadButton label="Add hero image" onUploaded={handleHeroUploaded} />
+            <button
+              className="px-2 py-1 text-sm border border-[var(--border)] rounded"
+              onClick={() => setPickerTarget("hero")}
+            >
+              Choose existing
+            </button>
+          </span>
         )}
         <span className="text-xs text-[var(--muted)] w-16 text-right">
           {saveState === "saving" ? "saving…" : saveState === "saved" ? "saved" : ""}
@@ -251,6 +306,18 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
         </button>
         <ImageUploadButton label="Insert image" onUploaded={handleImageInsert} />
         <GalleryUploadButton onUploaded={handleGalleryInsert} />
+        <button
+          className="px-2 py-1 text-sm border border-[var(--border)] rounded"
+          onClick={() => setPickerTarget("inline")}
+        >
+          Choose image
+        </button>
+        <button
+          className="px-2 py-1 text-sm border border-[var(--border)] rounded"
+          onClick={() => setPickerTarget("gallery")}
+        >
+          Choose for gallery
+        </button>
         <button className="px-2 py-1 text-sm border border-[var(--border)] rounded" onClick={() => editorRef.current?.wrapFullBleed()}>Full-bleed</button>
         <button onClick={handleOpenPreview} className="px-2 py-1 text-sm border border-[var(--border)] rounded">
           Preview email
@@ -284,7 +351,12 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
           <Editor ref={editorRef} value={markdown} onChange={handleMarkdownChange} onDropFiles={handleDropFiles} />
         </div>
         <div className="w-1/2 overflow-auto p-6">
-          <Preview markdown={markdown} heroImageUrl={heroImageUrl || undefined} heroImageAlt={campaign.heroImageAlt || undefined} />
+          <Preview
+            markdown={markdown}
+            heroImageUrl={heroImageUrl || undefined}
+            heroImageAlt={campaign.heroImageAlt || undefined}
+            dimensions={dimensions}
+          />
         </div>
       </div>
 
@@ -295,6 +367,14 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
         onConfirm={handleSendCampaign}
         onCancel={() => setConfirmSendOpen(false)}
       />
+
+      {pickerTarget && (
+        <ImagePickerModal
+          mode={pickerTarget === "gallery" ? "multi" : "single"}
+          onSelect={handlePickerSelect}
+          onClose={() => setPickerTarget(null)}
+        />
+      )}
 
       {showPreview && <EmailPreviewModal campaignId={id} onClose={() => setShowPreview(false)} />}
     </div>

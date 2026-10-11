@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { campaigns } from "@/lib/schema";
 import { getOrCreateSettings } from "@/lib/settings";
 import { renderEmailHtml } from "@/lib/email";
+import { getImageDimensions } from "@/lib/imageDimensions";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ campaignId: string }> }) {
   const { campaignId } = await params;
@@ -15,6 +16,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ cam
   }
 
   const settings = await getOrCreateSettings();
-  const html = renderEmailHtml(campaign, null, settings);
+  const dimensions = await getImageDimensions();
+  const html = renderEmailHtml(campaign, null, settings, "light", false, false, dimensions);
   return new NextResponse(html, { headers: { "content-type": "text/html; charset=utf-8" } });
 }

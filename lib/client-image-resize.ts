@@ -17,18 +17,32 @@ function hasRealTransparency(ctx: CanvasRenderingContext2D, width: number, heigh
   return false;
 }
 
-export async function resizeImageFile(file: File): Promise<File> {
+export interface ResizedImage {
+  file: File;
+  width: number;
+  height: number;
+}
+
+export async function resizeImageFile(file: File): Promise<ResizedImage> {
   // Animated GIFs would be flattened to a single frame by canvas resizing — pass them
-  // through untouched rather than silently killing the animation.
-  if (file.type === "image/gif") return file;
+  // through untouched rather than silently killing the animation. Still report real
+  // dimensions (via a bitmap probe, no resize math) so galleries can lay an unresized
+  // GIF out alongside other photos without cropping.
+  if (file.type === "image/gif") {
+    const bitmap = await createImageBitmap(file);
+    const { width, height } = bitmap;
+    bitmap.close();
+    return { file, width, height };
+  }
 
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
 
   if (scale === 1 && file.size < 1_500_000) {
     // Already small and already the right size — resizing would only cost time/quality.
+    const { width, height } = bitmap;
     bitmap.close();
-    return file;
+    return { file, width, height };
   }
 
   const width = Math.round(bitmap.width * scale);
@@ -53,5 +67,5 @@ export async function resizeImageFile(file: File): Promise<File> {
 
   const ext = outputType === "image/png" ? "png" : "jpg";
   const name = file.name.replace(/\.[^.]+$/, "") + "." + ext;
-  return new File([blob], name, { type: outputType });
+  return { file: new File([blob], name, { type: outputType }), width, height };
 }

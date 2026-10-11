@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { parseMarkdown } from "@/lib/markdown/parse";
+import { parseMarkdown, type GalleryDimensions } from "@/lib/markdown/parse";
 
 interface PreviewProps {
   markdown: string;
   heroImageUrl?: string;
   heroImageAlt?: string;
+  // Real photo dimensions, keyed by URL, for any ":::gallery" blocks — see GalleryDimensions
+  // in lib/markdown/parse.ts. The editor page fetches/maintains this; defaults to empty here
+  // so every gallery just falls back to the cropped grid if the caller doesn't pass one.
+  dimensions?: GalleryDimensions;
 }
 
 interface FooterSettings {
@@ -15,8 +19,8 @@ interface FooterSettings {
     physicalMailingAddress: string;
 }
 
-export default function Preview({ markdown, heroImageUrl, heroImageAlt }: PreviewProps) {
-  const html = useMemo(() => parseMarkdown(markdown), [markdown]);
+export default function Preview({ markdown, heroImageUrl, heroImageAlt, dimensions = {} }: PreviewProps) {
+  const html = useMemo(() => parseMarkdown(markdown, dimensions), [markdown, dimensions]);
   const [footer, setFooter] = useState(null as FooterSettings | null);
 
   useEffect(() => {

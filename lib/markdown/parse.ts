@@ -52,7 +52,21 @@ interface GalleryImage {
   src: string;
 }
 
-function parseGalleryBlock(lines: string[], startIdx: number): { html: string; nextIdx: number } | null {
+// Local, type-only mirror of lib/imageDimensions.ts's ImageDimensions — duplicated rather than
+// imported because this module is also bundled client-side (components/Preview.tsx), and
+// lib/imageDimensions.ts pulls in the server-only DB client.
+export type GalleryDimensions = Record<string, { width: number; height: number }>;
+
+// Shared row height (px) for the justified layout below — also emitted as the --gallery-row-height
+// custom property so app/globals.css's .gallery--justified rule stays in sync with this value
+// from one source instead of two numbers drifting apart.
+const JUSTIFIED_ROW_HEIGHT = 220;
+
+function parseGalleryBlock(
+  lines: string[],
+  startIdx: number,
+  dimensions: GalleryDimensions = {}
+): { html: string; nextIdx: number } | null {
   // Pando addition (not in tree): ":::gallery" fenced block containing image lines,
   // rendered by the browser preview with a real CSS grid (the email renderer emits an
   // HTML table grid instead — see lib/email.ts — because email clients don't support grid/flexbox).
@@ -64,15 +78,33 @@ function parseGalleryBlock(lines: string[], startIdx: number): { html: string; n
     if (m) images.push({ alt: m[1], src: m[2] });
     i++;
   }
+
+  // Justified (no-crop) layout when every photo's real aspect ratio is known — a CSS-only
+  // flexbox technique (flex-grow proportional to each photo's own ratio, fixed row height)
+  // that fills each row edge-to-edge without cropping. Falls back to the cropped square grid
+  // (app/globals.css's .gallery--cropped) for a gallery with any image of unknown dimensions
+  // (uploaded before this existed, or a hand-typed external URL) rather than mixing guessed
+  // and real ratios in the same row.
+  const ratios = images.map((img) => {
+    const d = dimensions[img.src];
+    return d ? d.width / d.height : null;
+  });
+  const justified = ratios.every((r) => r !== null);
+
   const items = images
-    .map(
-      (img) =>
-        `<figure class="gallery-item"><img src="${escapeHtml(img.src)}" alt="${escapeHtml(img.alt)}">${
-          img.alt ? `<figcaption>${escapeHtml(img.alt)}</figcaption>` : ""
-        }</figure>`
-    )
+    .map((img, idx) => {
+      const style = justified ? ` style="flex-grow:${(ratios[idx] as number).toFixed(4)};flex-basis:${Math.round((ratios[idx] as number) * JUSTIFIED_ROW_HEIGHT)}px"` : "";
+      return `<figure class="gallery-item"${style}><img src="${escapeHtml(img.src)}" alt="${escapeHtml(img.alt)}">${
+        img.alt ? `<figcaption>${escapeHtml(img.alt)}</figcaption>` : ""
+      }</figure>`;
+    })
     .join("");
-  return { html: `<div class="gallery" data-count="${images.length}">${items}</div>\n`, nextIdx: i + 1 };
+  const galleryClass = justified ? "gallery gallery--justified" : "gallery gallery--cropped";
+  const rowHeightStyle = justified ? ` style="--gallery-row-height:${JUSTIFIED_ROW_HEIGHT}px"` : "";
+  return {
+    html: `<div class="${galleryClass}" data-count="${images.length}"${rowHeightStyle}>${items}</div>\n`,
+    nextIdx: i + 1,
+  };
 }
 
 function parseFullBleedBlock(lines: string[], startIdx: number): { html: string; nextIdx: number } | null {
@@ -95,7 +127,7 @@ function parseFullBleedBlock(lines: string[], startIdx: number): { html: string;
   return { html, nextIdx: i + 1 };
 }
 
-export function parseMarkdown(md: string): string {
+export function parseMarkdown(md: string, dimensions: GalleryDimensions = {}): string {
   const footnoteMap = new Map<string, string>();
   const footnoteOrder: string[] = [];
 
@@ -120,7 +152,7 @@ export function parseMarkdown(md: string): string {
     const lineNum = i + 1;
     const line = lines[i];
 
-    const gallery = parseGalleryBlock(lines, i);
+    const gallery = parseGalleryBlock(lines, i, dimensions);
     if (gallery) {
       html += gallery.html;
       i = gallery.nextIdx;

@@ -103,6 +103,14 @@ export const images = pgTable("images", {
   url: text("url").notNull(),
   alt: text("alt"),
   size: integer("size").notNull().default(0),
+  // Pixel dimensions as actually uploaded (post client-side resize — lib/client-image-resize.ts
+  // already computes these during the canvas resize, so the client just reports them rather
+  // than this app needing an image-processing library to re-derive them server-side). Nullable:
+  // images uploaded before this column existed won't have it. Used to lay out ":::gallery"
+  // blocks without cropping — see lib/imageDimensions.ts and the gallery renderers in
+  // lib/markdown/parse.ts / lib/markdown/email.ts.
+  width: integer("width"),
+  height: integer("height"),
   uploadedAt: timestamp("uploaded_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

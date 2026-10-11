@@ -1,5 +1,5 @@
  import juice from "juice";
-import { renderEmailBody } from "./markdown/email";
+import { renderEmailBody, type GalleryDimensions } from "./markdown/email";
 import { makeSubscriberToken } from "./tokens";
 
 interface CampaignLike {
@@ -73,6 +73,7 @@ function emailCss(settings: SettingsLike, theme: "light" | "dark" = "light", for
   .gallery-table { margin: 10px 0; }
   .gallery-cell { padding:4px; vertical-align:top; }
   .gallery-img { width:100%; aspect-ratio:1/1; object-fit:cover; display:block; border:0; border-radius:4px; }
+  .gallery-img--justified { width:100%; height:auto; display:block; border:0; border-radius:4px; }
   .gallery-caption { font-size:12px; color:${muted}; margin-top:4px; }
   .full-bleed-table { margin: 12px -32px; width: calc(100% + 64px) !important; max-width: calc(100% + 64px) !important; }
   .email-full-bleed { width:100%; height:auto; display:block; border:0; }
@@ -108,11 +109,15 @@ export function renderEmailHtml(
     // Admin-only: shows illustrative (non-functional) View in browser/Unsubscribe
     // placeholders even though there's no real subscriber to link to. Never set this
     // for real sends or the public /p/[id] page.
-    previewMode = false
+    previewMode = false,
+  // Real photo dimensions for any ":::gallery" blocks in the body (lib/imageDimensions.ts),
+  // so they can lay out without cropping when every photo's ratio is known. Defaults to
+  // empty, which just means every gallery falls back to the cropped grid.
+  dimensions: GalleryDimensions = {}
 ): string {
   const viewInBrowserUrl = `${appUrl()}/p/${campaign.id}`;
 
-  const bodyHtml = renderEmailBody(campaign.markdownBody);
+  const bodyHtml = renderEmailBody(campaign.markdownBody, dimensions);
 
   const heroHtml =
     campaign.heroImageUrl && /^https:\/\//i.test(campaign.heroImageUrl)

@@ -4,6 +4,7 @@ import { campaigns, subscribers, sends } from "./schema";
 import { getOrCreateSettings } from "./settings";
 import { renderEmailHtml, unsubscribeHeaders } from "./email";
 import { sendEmail } from "./resend";
+import { getImageDimensions, type ImageDimensions } from "./imageDimensions";
 
 // Resend's free tier caps at 100 emails/day. Batches stay under that (with headroom
 // for test sends and confirmation emails also drawn from the same daily quota) so a
@@ -30,9 +31,10 @@ async function sendToOne(
   campaignId: string,
   campaign: typeof campaigns.$inferSelect,
   subscriber: typeof subscribers.$inferSelect,
-  settings: Awaited<ReturnType<typeof getOrCreateSettings>>
+  settings: Awaited<ReturnType<typeof getOrCreateSettings>>,
+  dimensions: ImageDimensions
 ): Promise<"sent" | "failed"> {
-  const html = renderEmailHtml(campaign, subscriber, settings);
+  const html = renderEmailHtml(campaign, subscriber, settings, "light", false, false, dimensions);
   try {
     const result = await sendEmail({
       to: subscriber.email,
@@ -75,6 +77,7 @@ export async function sendCampaignBatch(campaignId: string, batchSize = SEND_BAT
   if (!campaign) throw new Error("Campaign not found.");
 
   const settings = await getOrCreateSettings();
+  const dimensions = await getImageDimensions();
   const allRecipients = await db.select().from(subscribers).where(eq(subscribers.status, "subscribed"));
   const existingSends = await db.select().from(sends).where(eq(sends.campaignId, campaignId));
   const completedIds = new Set(
@@ -89,7 +92,7 @@ export async function sendCampaignBatch(campaignId: string, batchSize = SEND_BAT
 
   for (let i = 0; i < batch.length; i += SEND_CONCURRENCY) {
     const chunk = batch.slice(i, i + SEND_CONCURRENCY);
-    const outcomes = await Promise.all(chunk.map((subscriber) => sendToOne(campaignId, campaign, subscriber, settings)));
+    const outcomes = await Promise.all(chunk.map((subscriber) => sendToOne(campaignId, campaign, subscriber, settings, dimensions)));
     for (const outcome of outcomes) {
       if (outcome === "sent") sent++;
       else failed++;

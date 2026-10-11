@@ -3,8 +3,14 @@
 import { useRef, useState } from "react";
 import { resizeImageFile } from "@/lib/client-image-resize";
 
+export interface UploadedImage {
+  url: string;
+  width: number | null;
+  height: number | null;
+}
+
 interface GalleryUploadButtonProps {
-  onUploaded: (urls: string[]) => void;
+  onUploaded: (images: UploadedImage[]) => void;
 }
 
 export default function GalleryUploadButton({ onUploaded }: GalleryUploadButtonProps) {
@@ -18,16 +24,18 @@ export default function GalleryUploadButton({ onUploaded }: GalleryUploadButtonP
     setUploading(true);
     setError(null);
 
-    const urls: string[] = [];
+    const uploaded: UploadedImage[] = [];
     for (const file of files) {
       try {
         const resized = await resizeImageFile(file);
         const formData = new FormData();
-        formData.append("file", resized);
+        formData.append("file", resized.file);
+        formData.append("width", String(resized.width));
+        formData.append("height", String(resized.height));
         const res = await fetch("/api/admin/uploads", { method: "POST", body: formData });
         if (res.ok) {
           const row = await res.json();
-          urls.push(row.url);
+          uploaded.push({ url: row.url, width: row.width ?? null, height: row.height ?? null });
         } else {
           const body = await res.json().catch(() => ({}));
           setError(body.error || "Upload failed.");
@@ -39,7 +47,7 @@ export default function GalleryUploadButton({ onUploaded }: GalleryUploadButtonP
 
     setUploading(false);
     if (inputRef.current) inputRef.current.value = "";
-    if (urls.length > 0) onUploaded(urls);
+    if (uploaded.length > 0) onUploaded(uploaded);
   }
 
   return (

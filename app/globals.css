@@ -90,20 +90,38 @@ body {
 .pando-preview del { opacity: 0.5; text-decoration: line-through; }
 .pando-preview img { max-width: 100%; }
 
-/* Gallery grid — Pando addition, not present in tree. Real CSS grid for the
-   browser preview; the email renderer emits a table-based grid instead since
-   email clients don't reliably support CSS grid/flexbox. */
-.pando-preview .gallery {
+/* Gallery — Pando addition, not present in tree. Two variants, chosen per-block by
+   lib/markdown/parse.ts depending on whether every photo's real dimensions are known
+   (lib/imageDimensions.ts) — the email renderer has its own equivalent pair in lib/email.ts
+   (an HTML table grid, since email clients don't reliably support CSS grid/flexbox). */
+.pando-preview .gallery { margin: 0.8em 0; }
+.pando-preview .gallery-item { margin: 0; }
+.pando-preview .gallery-item figcaption { font-size: 0.8em; color: var(--muted); margin-top: 4px; }
+
+/* Cropped fallback — used when any photo in the block has unknown dimensions (uploaded
+   before this existed, or a hand-typed external URL), so a mix of real and guessed ratios
+   never ends up in the same row. Crops every photo to a uniform square (object-fit) so mixed
+   portrait/landscape shots still line up, at the cost of losing each photo's edges. */
+.pando-preview .gallery--cropped {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 10px;
-  margin: 0.8em 0;
 }
-.pando-preview .gallery-item { margin: 0; }
-/* Crop every gallery photo to a uniform square so mixed portrait/landscape shots line up
-   in a row instead of leaving ragged heights (object-fit crops, aspect-ratio sets the box). */
-.pando-preview .gallery-item img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: block; border-radius: 4px; }
-.pando-preview .gallery-item figcaption { font-size: 0.8em; color: var(--muted); margin-top: 4px; }
+.pando-preview .gallery--cropped .gallery-item img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: block; border-radius: 4px; }
+
+/* Justified (no-crop) — used when every photo's real aspect ratio is known. Each photo's
+   flex-grow is set (inline, per-item, in lib/markdown/parse.ts) proportional to its own
+   width/height ratio at a shared row height, so a row of mixed portrait/landscape shots
+   fills edge-to-edge with no whitespace and no cropping — the standard CSS-only "justified
+   gallery" technique. object-fit:contain is a rounding-error safety net only; the flex math
+   already makes each item's box match the photo's real ratio. */
+.pando-preview .gallery--justified { display: flex; flex-wrap: wrap; gap: 10px; }
+.pando-preview .gallery--justified .gallery-item {
+  height: var(--gallery-row-height, 220px);
+  overflow: hidden;
+  border-radius: 4px;
+}
+.pando-preview .gallery--justified .gallery-item img { width: 100%; height: 100%; object-fit: contain; display: block; }
 
 .pando-preview .hero-image { width: 100%; height: auto; display: block; border-radius: 6px; margin-bottom: 1em; }
 

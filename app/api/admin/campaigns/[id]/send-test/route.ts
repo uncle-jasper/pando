@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { campaigns } from "@/lib/schema";
 import { getOrCreateSettings } from "@/lib/settings";
 import { renderEmailHtml } from "@/lib/email";
+import { getImageDimensions } from "@/lib/imageDimensions";
 import { sendEmail } from "@/lib/resend";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -22,7 +23,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Set a From email in Settings before sending." }, { status: 400 });
   }
 
-  const html = renderEmailHtml(campaign, null, settings);
+  const dimensions = await getImageDimensions();
+  const html = renderEmailHtml(campaign, null, settings, "light", false, false, dimensions);
 
   try {
     await sendEmail({

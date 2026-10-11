@@ -58,7 +58,15 @@ function parseInlineEmail(s: string): string {
     .replace(/\[\^([^\]]+)\]/g, (_, label) => `<sup>${label}</sup>`);
 }
 
-function parseGalleryTable(lines: string[], startIdx: number): { html: string; nextIdx: number } | null {
+// Local, type-only mirror of lib/imageDimensions.ts's ImageDimensions — see the matching
+// comment in lib/markdown/parse.ts for why this is duplicated rather than imported.
+export type GalleryDimensions = Record<string, { width: number; height: number }>;
+
+function parseGalleryTable(
+  lines: string[],
+  startIdx: number,
+  dimensions: GalleryDimensions = {}
+): { html: string; nextIdx: number } | null {
   if (lines[startIdx].trim() !== ":::gallery") return null;
   const images: { alt: string; src: string }[] = [];
   let i = startIdx + 1;
@@ -72,19 +80,42 @@ function parseGalleryTable(lines: string[], startIdx: number): { html: string; n
   const rows: (typeof images)[] = [];
   for (let r = 0; r < images.length; r += cols) rows.push(images.slice(r, r + cols));
 
-  const cellWidth = Math.floor(100 / cols);
+  // Justified (no-crop) when every photo in the gallery has a known ratio: email tables can't
+  // run flexbox, so the equivalent of lib/markdown/parse.ts's flex-grow trick is computed here
+  // directly as literal column-width percentages (width_i = ratio_i / sum(ratios in row) * 100),
+  // then the <img> just scales width:100%/height:auto — no object-fit or aspect-ratio needed,
+  // since the cell width already matches the photo's real shape by construction. Falls back to
+  // equal-width cropped columns (.gallery-img, aspect-ratio:1/1 + object-fit:cover in lib/email.ts)
+  // when any image's dimensions are unknown, same reasoning as the browser-preview fallback.
+  const allKnown = images.every((img) => {
+    const d = dimensions[img.src];
+    return d && d.width > 0 && d.height > 0;
+  });
+
   const rowsHtml = rows
-    .map(
-      (row) =>
-        `<tr>${row
-          .map(
-            (img) =>
-              `<td class="gallery-cell" width="${cellWidth}%"><img src="${escapeHtml(img.src)}" alt="${escapeHtml(
-                img.alt
-              )}" class="gallery-img">${img.alt ? `<div class="gallery-caption">${escapeHtml(img.alt)}</div>` : ""}</td>`
-          )
-          .join("")}</tr>`
-    )
+    .map((row) => {
+      if (allKnown) {
+        const ratios = row.map((img) => dimensions[img.src].width / dimensions[img.src].height);
+        const sumRatio = ratios.reduce((s, r) => s + r, 0);
+        return `<tr>${row
+          .map((img, idx) => {
+            const pct = (ratios[idx] / sumRatio) * 100;
+            return `<td class="gallery-cell" width="${pct.toFixed(2)}%"><img src="${escapeHtml(img.src)}" alt="${escapeHtml(
+              img.alt
+            )}" class="gallery-img--justified">${img.alt ? `<div class="gallery-caption">${escapeHtml(img.alt)}</div>` : ""}</td>`;
+          })
+          .join("")}</tr>`;
+      }
+      const cellWidth = Math.floor(100 / cols);
+      return `<tr>${row
+        .map(
+          (img) =>
+            `<td class="gallery-cell" width="${cellWidth}%"><img src="${escapeHtml(img.src)}" alt="${escapeHtml(
+              img.alt
+            )}" class="gallery-img">${img.alt ? `<div class="gallery-caption">${escapeHtml(img.alt)}</div>` : ""}</td>`
+        )
+        .join("")}</tr>`;
+    })
     .join("");
 
   return {
@@ -115,7 +146,7 @@ function parseFullBleedTable(lines: string[], startIdx: number): { html: string;
   return { html, nextIdx: i + 1 };
 }
 
-export function renderEmailBody(md: string): string {
+export function renderEmailBody(md: string, dimensions: GalleryDimensions = {}): string {
   const footnoteMap = new Map<string, string>();
   const footnoteOrder: string[] = [];
 
@@ -139,7 +170,7 @@ export function renderEmailBody(md: string): string {
   while (i < lines.length) {
     const line = lines[i];
 
-    const gallery = parseGalleryTable(lines, i);
+    const gallery = parseGalleryTable(lines, i, dimensions);
     if (gallery) {
       html += gallery.html;
       i = gallery.nextIdx;
