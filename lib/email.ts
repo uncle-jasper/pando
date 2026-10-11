@@ -71,7 +71,7 @@ function emailCss(settings: SettingsLike, theme: "light" | "dark" = "light", for
   .email-link { color:${text}; text-decoration:underline; }
   .email-img { max-width:100%; display:block; border:0; margin: 10px 0; }
   .email-image-caption { display:block; font-size:12px; color:${muted}; margin-top:4px; text-align:center; }
-  .gallery-table { margin: 10px 0; }
+  .gallery-block { margin: 10px 0; }
   .gallery-cell { padding:4px; vertical-align:middle; }
   .gallery-link { display:block; text-decoration:none; }
   .gallery-img { width:100%; aspect-ratio:1/1; object-fit:cover; display:block; border:0; border-radius:4px; }

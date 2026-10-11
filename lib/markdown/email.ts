@@ -76,21 +76,19 @@ function parseGalleryTable(
     i++;
   }
 
-  // TEMPORARY revert to test a theory: every "photo went missing in the actual email"
-  // report so far has been a 3-photo gallery split into a row of 2 + a row of 1 (the
-  // consequence of capping rows at 2 photos below) — and it's consistently the second
-  // cell of the 2-cell row that disappears, in both Gmail and Proton, despite the
-  // generated HTML (checked via "view source" on a real send) being complete and
-  // well-formed. Before this row-splitting existed, a 3-photo gallery was always a
-  // single <tr> with 3 <td>s and never lost a photo. Testing whether a <tr> with a
-  // different cell count immediately followed by another <tr> with a different cell
-  // count is itself what these clients choke on. Back to cols=3 while that's confirmed
-  // — this makes photos smaller again (the original complaint), so it needs a different
-  // fix once the cause is nailed down, not a return to this.
-  const cols = images.length >= 3 ? 3 : Math.max(images.length, 1);
+  // Two photos per row so each renders at a usable size in a 600px email.
+  const cols = images.length >= 2 ? 2 : 1;
   const rows: (typeof images)[] = [];
   for (let r = 0; r < images.length; r += cols) rows.push(images.slice(r, r + cols));
 
+  // IMPORTANT — one <table> PER ROW, never one table with rows of different cell counts.
+  // In an HTML table, cells in the same column share a single width across every row. A
+  // gallery of 3 used to be one table: row 1 with two cells (e.g. 53%/47%) and row 2 with a
+  // lone cell at width="100%". That 100% cell forced column 1 to ~full width, which squeezed
+  // column 2 — the second photo of row 1 — down to 0x0, so it silently vanished (Gmail and
+  // Proton both; verified by measuring the rendered boxes in Chromium: 520x390 for photo 1,
+  // 0x0 for photo 2). Separate tables per row make each row lay out on its own.
+  //
   // Justified (no-crop) when every photo in the gallery has a known ratio: email tables can't
   // run flexbox, so the equivalent of lib/markdown/parse.ts's flex-grow trick is computed here
   // directly as literal column-width percentages (width_i = ratio_i / sum(ratios in row) * 100),
@@ -102,42 +100,57 @@ function parseGalleryTable(
     const d = dimensions[img.src];
     return d && d.width > 0 && d.height > 0;
   });
+  const ratioOf = (img: { src: string }) => dimensions[img.src].width / dimensions[img.src].height;
+
+  // Photos link to their own full-resolution file (uploads are kept up to 1600px — see
+  // lib/client-image-resize.ts) so a reader can tap/click to see one larger.
+  const imgHtml = (img: { alt: string; src: string }, cls: string) =>
+    `<a href="${escapeHtml(img.src)}" target="_blank" rel="noopener" class="gallery-link"><img src="${escapeHtml(
+      img.src
+    )}" alt="${escapeHtml(img.alt)}" class="${cls}"></a>${
+      img.alt ? `<div class="gallery-caption">${escapeHtml(img.alt)}</div>` : ""
+    }`;
 
   const rowsHtml = rows
-    .map((row) => {
-      if (allKnown) {
-        const ratios = row.map((img) => dimensions[img.src].width / dimensions[img.src].height);
-        const sumRatio = ratios.reduce((s, r) => s + r, 0);
-        return `<tr>${row
-          .map((img, idx) => {
-            const pct = (ratios[idx] / sumRatio) * 100;
-            // NOTE: this used to wrap each <img> in an <a href="{own src}"> so tapping opened
-            // the full-resolution file. Pulled out (temporarily, for testing) because two
-            // photos landing in the same row — each in its own <a style="display:block"> inside
-            // a percentage-width <td> — correlates exactly with reports of the second photo in a
-            // 3-photo gallery silently vanishing in both Gmail and Proton, even though the HTML
-            // itself (checked via "view source" on a real send) was complete and well-formed.
-            // Re-add once that's confirmed as the actual cause and a safer pattern is worked out.
-            return `<td class="gallery-cell" width="${pct.toFixed(2)}%"><img src="${escapeHtml(img.src)}" alt="${escapeHtml(
-              img.alt
-            )}" class="gallery-img--justified">${img.alt ? `<div class="gallery-caption">${escapeHtml(img.alt)}</div>` : ""}</td>`;
-          })
-          .join("")}</tr>`;
+    .map((row, rowIdx) => {
+      const cls = allKnown ? "gallery-img--justified" : "gallery-img";
+
+      // A lone photo in the last row (odd count) gets its own centered table, sized so its
+      // height matches the row above: width = ratio / sum(previous row's ratios). Clamped to
+      // at least 50% so a portrait photo after two landscapes isn't left tiny (it ends up a
+      // bit taller than the row above instead, which reads fine).
+      if (row.length === 1 && rows.length > 1) {
+        const pct = allKnown
+          ? Math.max(50, Math.min(100, (ratioOf(row[0]) / rows[rowIdx - 1].reduce((s, im) => s + ratioOf(im), 0)) * 100))
+          : Math.floor(100 / cols);
+        return `<table role="presentation" class="gallery-table" width="${pct.toFixed(
+          2
+        )}%" align="center" cellpadding="0" cellspacing="0" style="margin:0 auto"><tbody><tr><td class="gallery-cell" width="100%">${imgHtml(
+          row[0],
+          cls
+        )}</td></tr></tbody></table>`;
       }
-      const cellWidth = Math.floor(100 / cols);
-      return `<tr>${row
-        .map(
-          (img) =>
-            `<td class="gallery-cell" width="${cellWidth}%"><img src="${escapeHtml(img.src)}" alt="${escapeHtml(
-              img.alt
-            )}" class="gallery-img">${img.alt ? `<div class="gallery-caption">${escapeHtml(img.alt)}</div>` : ""}</td>`
-        )
-        .join("")}</tr>`;
+
+      let cells: string;
+      if (allKnown) {
+        const ratios = row.map(ratioOf);
+        const sumRatio = ratios.reduce((s, r) => s + r, 0);
+        cells = row
+          .map(
+            (img, idx) =>
+              `<td class="gallery-cell" width="${((ratios[idx] / sumRatio) * 100).toFixed(2)}%">${imgHtml(img, cls)}</td>`
+          )
+          .join("");
+      } else {
+        const cellWidth = Math.floor(100 / cols);
+        cells = row.map((img) => `<td class="gallery-cell" width="${cellWidth}%">${imgHtml(img, cls)}</td>`).join("");
+      }
+      return `<table role="presentation" class="gallery-table" width="100%" cellpadding="0" cellspacing="0"><tbody><tr>${cells}</tr></tbody></table>`;
     })
     .join("");
 
   return {
-    html: `<table role="presentation" class="gallery-table" width="100%" cellpadding="0" cellspacing="0"><tbody>${rowsHtml}</tbody></table>\n`,
+    html: `<div class="gallery-block">${rowsHtml}</div>\n`,
     nextIdx: i + 1,
   };
 }
