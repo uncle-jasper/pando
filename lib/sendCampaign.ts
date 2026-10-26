@@ -34,7 +34,7 @@ async function sendToOne(
   settings: Awaited<ReturnType<typeof getOrCreateSettings>>,
   dimensions: ImageDimensions
 ): Promise<"sent" | "failed"> {
-  const html = renderEmailHtml(campaign, subscriber, settings, "light", false, false, dimensions);
+  const html = renderEmailHtml(campaign, subscriber, settings, "light", false, false, dimensions, "link");
   try {
     const result = await sendEmail({
       to: subscriber.email,

@@ -20,3 +20,16 @@ export function verifySubscriberToken(token: string): string | null {
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
   return subscriberId;
 }
+
+// Signed key that lets a *draft* campaign's /p/[id] page open — used only by test sends, so
+// tapping a photo in a test email reaches the lightbox before the issue is actually sent.
+// Drafts otherwise stay private (the /p route 404s them without this key).
+export function makePreviewKey(campaignId: string): string {
+  return sign(`preview:${campaignId}`);
+}
+
+export function verifyPreviewKey(campaignId: string, key: string): boolean {
+  const a = Buffer.from(key);
+  const b = Buffer.from(makePreviewKey(campaignId));
+  return a.length === b.length && timingSafeEqual(a, b);
+}

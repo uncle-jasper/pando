@@ -6,6 +6,7 @@ import { getOrCreateSettings } from "@/lib/settings";
 import { renderEmailHtml } from "@/lib/email";
 import { getImageDimensions } from "@/lib/imageDimensions";
 import { sendEmail } from "@/lib/resend";
+import { makePreviewKey } from "@/lib/tokens";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -24,7 +25,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   const dimensions = await getImageDimensions();
-  const html = renderEmailHtml(campaign, null, settings, "light", false, false, dimensions);
+  const html = renderEmailHtml(
+    campaign,
+    null,
+    settings,
+    "light",
+    false,
+    false,
+    dimensions,
+    "link",
+    // Drafts aren't public, so the test email's photo links carry a signed key that lets
+    // just this draft's web page open (see makePreviewKey in lib/tokens.ts).
+    campaign.status === "draft" ? `${process.env.APP_URL || "http://localhost:3000"}/p/${campaign.id}?k=${makePreviewKey(campaign.id)}` : undefined
+  );
 
   try {
     await sendEmail({

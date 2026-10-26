@@ -1,6 +1,7 @@
  import juice from "juice";
 import { FOOTER_REASON } from "./footer";
 import { renderEmailBody, type GalleryDimensions } from "./markdown/email";
+import { applyPhotoMode, LIGHTBOX_SNIPPET, type PhotoMode } from "./photoLightbox";
 import { makeSubscriberToken } from "./tokens";
 
 interface CampaignLike {
@@ -126,7 +127,13 @@ export function renderEmailHtml(
   // Real photo dimensions for any ":::gallery" blocks in the body (lib/imageDimensions.ts),
   // so they can lay out without cropping when every photo's ratio is known. Defaults to
   // empty, which just means every gallery falls back to the cropped grid.
-  dimensions: GalleryDimensions = {}
+  dimensions: GalleryDimensions = {},
+  // How photos behave — see lib/photoLightbox.ts. "link" for emails (each photo opens the
+  // issue's web page on that photo), "lightbox" for the web page itself and the admin preview.
+  photoMode: PhotoMode = "none",
+  // Where "link" mode points. Defaults to the public web page; test sends pass a keyed URL
+  // so the link works before the issue is sent.
+  photoLinkBase?: string
 ): string {
   const viewInBrowserUrl = `${appUrl()}/p/${campaign.id}`;
 
@@ -192,7 +199,12 @@ ${footerHtml}
   // height="auto" HTML attributes, which isn't a legal value there (the attribute wants a
   // number) and some stricter renderers can choke on. Turned off; width:100%/height:auto
   // already reaches every client through the inlined style attribute itself.
-  return juice(html, { preserveMediaQueries: true, applyWidthAttributes: false, applyHeightAttributes: false });
+  const inlined = juice(applyPhotoMode(html, photoMode, photoLinkBase ?? viewInBrowserUrl), {
+    preserveMediaQueries: true,
+    applyWidthAttributes: false,
+    applyHeightAttributes: false,
+  });
+  return photoMode === "lightbox" ? inlined.replace("</body>", `${LIGHTBOX_SNIPPET}\n</body>`) : inlined;
 }
 
 export function unsubscribeHeaders(subscriberId: string) {
