@@ -2,7 +2,7 @@
 /**
  * Plugin Name: 3 Stops from Main Archive
  * Description: Shows past issues of the "3 Stops from Main" newsletter (fetched from Pando) as a list under the signup form on /newsletter, with one page per issue at /newsletter/vol-001-title. Shows nothing until the first issue has been sent.
- * Version: 1.2.2
+ * Version: 1.2.3
  * Author: Dan Benson
  * License: GPL-2.0-or-later
  */
@@ -414,7 +414,7 @@ function tsm_render_archive()
             $out .= '<div class="tsm-thumb-empty"></div>';
         }
         $out .= '</a><div class="tsm-text">';
-        $out .= '<p class="tsm-vol">' . (!empty($i['draft']) ? '<span class="tsm-draft">Draft</span>' : '') . esc_html(sprintf('Vol. %03d · %s', (int) $i['vol'], tsm_pretty_date($i['date']))) . '</p>';
+        $out .= '<p class="tsm-vol">' . (!empty($i['draft']) ? '<span class="tsm-draft">Draft</span>' : '') . esc_html(sprintf('vol. %03d · %s', (int) $i['vol'], tsm_pretty_date($i['date']))) . '</p>';
         $out .= '<a class="tsm-item-title" href="' . esc_url($url) . '">' . esc_html($i['title']) . '</a>';
         $out .= '</div></li>';
     }
@@ -436,13 +436,13 @@ function tsm_render_issue($data)
     $links = array();
     if (!empty($data['prev'])) {
         $links[] = '<a href="' . esc_url(tsm_issue_path($data['prev']['vol'], $data['prev']['slug'])) . '">&larr; '
-            . esc_html(sprintf('Vol. %03d', (int) $data['prev']['vol'])) . '</a>';
+            . esc_html(sprintf('vol. %03d', (int) $data['prev']['vol'])) . '</a>';
     } else {
         $links[] = '<span></span>';
     }
     if (!empty($data['next'])) {
         $links[] = '<a href="' . esc_url(tsm_issue_path($data['next']['vol'], $data['next']['slug'])) . '">'
-            . esc_html(sprintf('Vol. %03d', (int) $data['next']['vol'])) . ' &rarr;</a>';
+            . esc_html(sprintf('vol. %03d', (int) $data['next']['vol'])) . ' &rarr;</a>';
     } else {
         $links[] = '<span></span>';
     }
