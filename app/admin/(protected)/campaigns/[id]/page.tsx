@@ -244,6 +244,19 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
         <p className="text-sm text-[var(--muted)]">
           This campaign has already been sent and can no longer be edited.
         </p>
+        <button
+          onClick={async () => {
+            const res = await fetch("/api/admin/campaigns", {
+              method: "POST",
+              body: JSON.stringify({ duplicateOf: id }),
+            });
+            const row = await res.json();
+            router.push(`/admin/campaigns/${row.id}`);
+          }}
+          className="mt-3 px-2 py-1 text-sm border border-[var(--border)] rounded"
+        >
+          Duplicate as new draft
+        </button>
       </div>
     );
   }

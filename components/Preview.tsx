@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { parseMarkdown, type GalleryDimensions } from "@/lib/markdown/parse";
 import { FOOTER_REASON } from "@/lib/footer";
 
@@ -21,7 +21,38 @@ interface FooterSettings {
 }
 
 export default function Preview({ markdown, heroImageUrl, heroImageAlt, dimensions = {} }: PreviewProps) {
-  const html = useMemo(() => parseMarkdown(markdown, dimensions), [markdown, dimensions]);
+  // data-source-line attributes are stripped here: nothing in Pando's preview uses them, and
+  // because they renumber every block below an edit, they'd defeat the block-level diff below.
+  const html = useMemo(
+    () => parseMarkdown(markdown, dimensions).replace(/ data-source-line="\d+"/g, ""),
+    [markdown, dimensions],
+  );
+  const bodyRef = useRef<HTMLDivElement>(null);
+
+  // Patch the preview in place instead of replacing its whole innerHTML on every keystroke.
+  // A full replace destroys and recreates every <img>, which briefly collapse to zero height
+  // while they re-decode — that's what made the preview jump around while typing. Here only
+  // the top-level blocks that actually changed get swapped; unchanged ones (and their images)
+  // stay exactly where they are.
+  useLayoutEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    const tpl = document.createElement("template");
+    tpl.innerHTML = html;
+    const next = Array.from(tpl.content.childNodes);
+    const cur = Array.from(el.childNodes);
+    let start = 0;
+    while (start < cur.length && start < next.length && cur[start].isEqualNode(next[start])) start++;
+    let endCur = cur.length - 1;
+    let endNext = next.length - 1;
+    while (endCur >= start && endNext >= start && cur[endCur].isEqualNode(next[endNext])) {
+      endCur--;
+      endNext--;
+    }
+    const anchor = cur[endCur + 1] ?? null;
+    for (let i = start; i <= endCur; i++) el.removeChild(cur[i]);
+    for (let i = start; i <= endNext; i++) el.insertBefore(next[i], anchor);
+  }, [html]);
   const [footer, setFooter] = useState(null as FooterSettings | null);
 
   useEffect(() => {
@@ -40,7 +71,7 @@ export default function Preview({ markdown, heroImageUrl, heroImageAlt, dimensio
       {heroImageUrl && (
         <img src={heroImageUrl} alt={heroImageAlt || ""} className="hero-image" />
       )}
-      <div dangerouslySetInnerHTML={{ __html: html }} />
+      <div ref={bodyRef} />
       {footer && (
       <div
         style={{

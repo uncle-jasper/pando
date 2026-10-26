@@ -62,6 +62,16 @@ export default function CampaignsPage() {
     router.push(`/admin/campaigns/${row.id}`);
   }
 
+  async function duplicate(c: Campaign) {
+    setCreating(true);
+    const res = await fetch("/api/admin/campaigns", {
+      method: "POST",
+      body: JSON.stringify({ duplicateOf: c.id }),
+    });
+    const row = await res.json();
+    router.push(`/admin/campaigns/${row.id}`);
+  }
+
   async function handleDelete() {
     if (!pendingDelete) return;
     await fetch(`/api/admin/campaigns/${pendingDelete.id}`, { method: "DELETE" });
@@ -135,7 +145,17 @@ export default function CampaignsPage() {
                 <td className="py-2 cursor-pointer" onClick={() => router.push(`/admin/campaigns/${c.id}`)}>
                   {new Date(c.updatedAt).toLocaleString()}
                 </td>
-                <td className="py-2 text-right">
+                <td className="py-2 text-right whitespace-nowrap">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      duplicate(c);
+                    }}
+                    disabled={creating}
+                    className="text-[var(--muted)] hover:text-[var(--text)] disabled:opacity-50 mr-4"
+                  >
+                    Duplicate
+                  </button>
                   {c.status === "draft" && (
                     <button
                       onClick={(e) => {
