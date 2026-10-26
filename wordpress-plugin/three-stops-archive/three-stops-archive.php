@@ -2,7 +2,7 @@
 /**
  * Plugin Name: 3 Stops from Main Archive
  * Description: Shows past issues of the "3 Stops from Main" newsletter (fetched from Pando) as a list under the signup form on /newsletter, with one page per issue at /newsletter/vol-001-title. Shows nothing until the first issue has been sent.
- * Version: 1.2.0
+ * Version: 1.2.1
  * Author: Dan Benson
  * License: GPL-2.0-or-later
  */
@@ -365,15 +365,16 @@ function tsm_styles()
 .tsm-issue .gallery-item figcaption { font-size: .8em; opacity: .65; margin-top: 4px; }
 .tsm-issue .gallery--cropped { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .tsm-issue .gallery--cropped .gallery-item img { aspect-ratio: 1 / 1; object-fit: cover; }
+.tsm-issue hr { border: 0; border-top: 1px solid currentColor; opacity: .3; height: 0; margin: 34px 0; background: none; }
 .tsm-issue blockquote { margin: 1.25em 0; padding: 4px 0 4px 16px; border-left: 3px solid currentColor; opacity: .8; font-style: italic; }
 .tsm-issue .footnotes { font-size: .85em; opacity: .8; border-top: 1px solid currentColor; margin-top: 2em; padding-top: .5em; }
-.tsm-pager { display: flex; justify-content: space-between; gap: 16px; margin: 2.5em 0 1em; font-size: .9em; flex-wrap: wrap; }
+.tsm-pager { display: flex; justify-content: space-between; gap: 16px; margin-top: 2.5em; margin-bottom: 1em; font-size: .9em; flex-wrap: wrap; }
 .tsm-pager a { text-decoration: none; }
 .tsm-pager a:hover { text-decoration: underline; }
 .tsm-pager .tsm-all { flex-basis: 100%; text-align: center; order: 3; opacity: .75; }
 .tsm-preview-note { font-size: .8em; opacity: .7; border: 1px dashed currentColor; padding: 6px 10px; margin: 0 0 1.5em; }
 .tsm-draft { text-transform: uppercase; letter-spacing: .05em; font-size: .9em; border: 1px solid currentColor; padding: 0 4px; margin-right: 6px; }
-.tsm-subscribe { margin: 3em 0 1em; text-align: center; }
+.tsm-subscribe { margin-top: 3em; margin-bottom: 1em; text-align: center; }
 .tsm-subscribe p { margin: 0; }
 .pando-signup-widget { max-width: 480px; margin: 2em auto 0; font-family: Inconsolata, sans-serif; }
 .pando-signup-form { display: flex; gap: 10px; }
