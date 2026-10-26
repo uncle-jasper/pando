@@ -2,6 +2,7 @@ import { desc, eq, ne } from "drizzle-orm";
 import { db } from "./db";
 import { campaigns } from "./schema";
 import { deriveTitle, parseMarkdown } from "./markdown/parse";
+import { getImageDimensions, type ImageDimensions } from "./imageDimensions";
 
 // Public archive of SENT issues, consumed by the danbenson.me WordPress plugin
 // (see "Planned: newsletter archive" in CLAUDE.md). Drafts and in-progress sends are never
@@ -88,6 +89,40 @@ function issueDate(markdown: string, sentAt: Date | null, updatedAt: Date): stri
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
 }
 
+// Web layout for ":::gallery" blocks, matching the email (lib/markdown/email.ts): two photos per
+// row, each row's photos sized by their real aspect ratios so they share one height with no
+// cropping (flex-basis 0 + flex-grow = ratio splits the row width in proportion to the ratios,
+// which makes the heights equal). A lone last photo sits centered, sized to roughly match the
+// row above (same 50–100% clamp as the email). Galleries with any photo of unknown size keep
+// parse.ts's cropped-square fallback (.gallery--cropped), styled by the WordPress plugin.
+export function webGalleries(html: string): string {
+  return html.replace(
+    /<div class="gallery gallery--justified"[^>]*>([\s\S]*?<\/figure>)<\/div>/g,
+    (_m, inner: string) => {
+      const figs = [...inner.matchAll(/<figure class="gallery-item" style="flex-grow:([\d.]+);[^"]*">([\s\S]*?)<\/figure>/g)].map(
+        (f) => ({ ratio: parseFloat(f[1]), body: f[2] })
+      );
+      const rows: (typeof figs)[] = [];
+      for (let i = 0; i < figs.length; i += 2) rows.push(figs.slice(i, i + 2));
+      const rowsHtml = rows
+        .map((row, idx) => {
+          const cells = row
+            .map((f) => `<figure class="gallery-item" style="flex:${f.ratio.toFixed(4)} 1 0%">${f.body}</figure>`)
+            .join("");
+          let style = "";
+          if (row.length === 1 && idx > 0) {
+            const prevSum = rows[idx - 1].reduce((s, f) => s + f.ratio, 0);
+            const pct = Math.max(50, Math.min(100, (row[0].ratio / prevSum) * 100));
+            style = ` style="width:${pct.toFixed(2)}%;margin-left:auto;margin-right:auto"`;
+          }
+          return `<div class="gallery-row"${style}>${cells}</div>`;
+        })
+        .join("");
+      return `<div class="gallery gallery--rows">${rowsHtml}</div>`;
+    }
+  );
+}
+
 function cleanBodyHtml(html: string): string {
   return html
     .replace(/ data-source-line="\d+"/g, "")
@@ -101,7 +136,7 @@ function cleanBodyHtml(html: string): string {
 
 type Row = typeof campaigns.$inferSelect;
 
-function toDetail(row: Row, vol: number, origin: string): IssueDetail {
+function toDetail(row: Row, vol: number, origin: string, dimensions: ImageDimensions): IssueDetail {
   const md = row.markdownBody;
   const title = row.title || deriveTitle(md) || `Vol. ${vol}`;
   const src = firstImageUrl(md, row.heroImageUrl);
@@ -115,7 +150,12 @@ function toDetail(row: Row, vol: number, origin: string): IssueDetail {
     excerpt: plainExcerpt(md),
     thumbnailUrl: optimized(origin, src, 640),
     ogImageUrl: optimized(origin, src, 1200),
-    bodyHtml: cleanBodyHtml(parseMarkdown(md)),
+    // The hero image (if one is set) leads the issue, as it does in the email.
+    bodyHtml: cleanBodyHtml(
+      (row.heroImageUrl && /^https:\/\//i.test(row.heroImageUrl)
+        ? `<img class="hero-image" src="${row.heroImageUrl.replace(/"/g, "&quot;")}" alt="${(row.heroImageAlt || "").replace(/"/g, "&quot;")}">\n`
+        : "") + webGalleries(parseMarkdown(md, dimensions))
+    ),
   };
 }
 
@@ -134,13 +174,14 @@ export async function getSentIssues(origin: string, includeDrafts = false): Prom
     ? await db.select().from(campaigns).where(ne(campaigns.status, "sent")).orderBy(desc(campaigns.updatedAt))
     : [];
   const rows = [...sentRows, ...draftRows];
+  const dimensions = rows.length ? await getImageDimensions() : {};
   const seen = new Set<number>();
   const out: IssueDetail[] = [];
   for (const row of rows) {
     const vol = parseVolume(row.markdownBody);
     if (vol === null || seen.has(vol)) continue;
     seen.add(vol);
-    const detail = toDetail(row, vol, origin);
+    const detail = toDetail(row, vol, origin, dimensions);
     if (row.status !== "sent") detail.draft = true;
     out.push(detail);
   }

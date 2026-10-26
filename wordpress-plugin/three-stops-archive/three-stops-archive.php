@@ -2,7 +2,7 @@
 /**
  * Plugin Name: 3 Stops from Main Archive
  * Description: Shows past issues of the "3 Stops from Main" newsletter (fetched from Pando) as a list under the signup form on /newsletter, with one page per issue at /newsletter/vol-001-title. Shows nothing until the first issue has been sent.
- * Version: 1.1.0
+ * Version: 1.2.0
  * Author: Dan Benson
  * License: GPL-2.0-or-later
  */
@@ -143,6 +143,23 @@ function tsm_api($path)
     }
     return null;
 }
+
+// Jetpack's image CDN (Photon, "i0.wp.com") rewrites every <img> on the site to load through
+// WordPress.com. Pando's photos are already sized and served from Vercel; routed through Photon
+// some of them fail to load, so leave anything from Pando or its image storage alone.
+function tsm_is_pando_image($src)
+{
+    return is_string($src) && (
+        strpos($src, 'blob.vercel-storage.com') !== false
+        || strpos($src, rtrim(TSM_PANDO_URL, '/') . '/') === 0
+    );
+}
+add_filter('jetpack_photon_skip_image', function ($skip, $src = '') {
+    return $skip || tsm_is_pando_image($src);
+}, 10, 2);
+add_filter('jetpack_photon_skip_for_url', function ($skip, $src = '') {
+    return $skip || tsm_is_pando_image($src);
+}, 10, 2);
 
 function tsm_issue_path($vol, $slug)
 {
@@ -330,14 +347,25 @@ function tsm_styles()
   .tsm-thumb { flex-basis: auto; width: 100%; }
   .tsm-thumb img, .tsm-thumb-empty { width: 100%; }
 }
-.tsm-issue img { max-width: 100%; height: auto; }
-.tsm-issue .meta-text { font-size: .8em; opacity: .65; margin: 0 0 .6em; }
-.tsm-issue .full-bleed-image { width: 100%; height: auto; display: block; margin: 1em 0; }
-.tsm-issue .full-bleed-caption, .tsm-issue .image-caption { display: block; font-size: .8em; opacity: .65; margin: 4px 0 1em; text-align: center; }
-.tsm-issue .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: .8em 0; }
-.tsm-issue .gallery-item { margin: 0; }
-.tsm-issue .gallery-item img { width: 100%; height: auto; display: block; }
+.tsm-issue, .tsm-pager, .tsm-subscribe, .tsm-preview-note--issue { max-width: 680px; margin-left: auto; margin-right: auto; padding-left: 1.25rem; padding-right: 1.25rem; box-sizing: border-box; }
+.tsm-issue p, .tsm-issue li { font-size: 17px; line-height: 1.7; margin: 0 0 1.25em; }
+.tsm-issue h1 { font-size: clamp(1.9rem, 4vw, 2.6rem); line-height: 1.2; font-weight: 700; margin: 1.25rem 0 .5rem; }
+.tsm-issue h2 { margin: 1.6em 0 .6em; line-height: 1.3; }
+.tsm-issue h3 { margin: 1.4em 0 .5em; line-height: 1.3; }
+.tsm-issue img { max-width: 100%; height: auto; display: block; }
+.tsm-issue .hero-image { width: 100%; margin: 0 0 1.5em; }
+.tsm-issue p.meta-text { font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; opacity: .55; line-height: 1.6; margin: 0 0 1em; }
+.tsm-issue .full-bleed-image { width: 100%; margin: 1.5em 0 0; }
+.tsm-issue .full-bleed-caption, .tsm-issue .image-caption { display: block; font-size: .8em; opacity: .65; margin: 6px 0 1.5em; text-align: center; }
+.tsm-issue .full-bleed-image + :not(.full-bleed-caption) { margin-top: 1.5em; }
+.tsm-issue .gallery { margin: 1.5em 0; }
+.tsm-issue .gallery-row { display: flex; gap: 10px; margin: 0 0 10px; }
+.tsm-issue .gallery-item { margin: 0; min-width: 0; }
+.tsm-issue .gallery-item img { width: 100%; height: auto; display: block; border-radius: 4px; }
 .tsm-issue .gallery-item figcaption { font-size: .8em; opacity: .65; margin-top: 4px; }
+.tsm-issue .gallery--cropped { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tsm-issue .gallery--cropped .gallery-item img { aspect-ratio: 1 / 1; object-fit: cover; }
+.tsm-issue blockquote { margin: 1.25em 0; padding: 4px 0 4px 16px; border-left: 3px solid currentColor; opacity: .8; font-style: italic; }
 .tsm-issue .footnotes { font-size: .85em; opacity: .8; border-top: 1px solid currentColor; margin-top: 2em; padding-top: .5em; }
 .tsm-pager { display: flex; justify-content: space-between; gap: 16px; margin: 2.5em 0 1em; font-size: .9em; flex-wrap: wrap; }
 .tsm-pager a { text-decoration: none; }
@@ -399,7 +427,7 @@ function tsm_render_issue($data)
 
     $out = tsm_styles();
     if (tsm_preview_mode()) {
-        $out .= tsm_preview_banner();
+        $out .= str_replace('tsm-preview-note', 'tsm-preview-note tsm-preview-note--issue', tsm_preview_banner());
     }
     $out .= '<div class="tsm-issue">' . $body . '</div>';
 
