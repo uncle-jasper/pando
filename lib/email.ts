@@ -70,6 +70,8 @@ function emailCss(settings: SettingsLike, theme: "light" | "dark" = "light", for
   .email-list { font-size:15px; line-height:1.6; margin:0 0 14px; padding-left:24px; }
   .email-blockquote { border-left:3px solid ${muted}; padding:4px 0 4px 16px; color:${muted}; font-style:italic; margin:0 0 14px; }
   .email-meta { font-size:12px; line-height:1.5; color:${muted}; margin:0 0 14px; }
+  .email-toplink { font-size:12px; line-height:1.5; text-align:right; margin:0 0 10px; }
+  .email-toplink a { color:${muted}; text-decoration:underline; }
   .email-pre { background:${muted}22; padding:12px 16px; border-radius:6px; overflow-x:auto; margin:0 0 14px; font-family: 'Courier New', monospace; font-size:14px; }
   .email-hr { border:none; border-top:1px solid ${muted}55; margin:20px 0; }
   .email-link { color:${text}; text-decoration:underline; }
@@ -108,7 +110,7 @@ ${
     }
     .email-blockquote { color:${settings.darkMuted} !important; border-left-color:${settings.darkMuted} !important; }
     .footer-rule { border-top-color:${settings.darkMuted} !important; }
-    .email-footer, .email-footer a, .email-footnote, .gallery-caption, .email-meta , .email-image-caption, .full-bleed-caption{ color:${settings.darkMuted} !important; }
+    .email-footer, .email-footer a, .email-footnote, .gallery-caption, .email-meta , .email-toplink a, .email-image-caption, .full-bleed-caption{ color:${settings.darkMuted} !important; }
     .email-pre { background:${settings.darkMuted}33 !important; }
   }`
     : ""
@@ -142,6 +144,21 @@ export function renderEmailHtml(
   const webUrl = issueWebUrl(campaign);
   const viewInBrowserUrl = webUrl ?? `${appUrl()}/p/${campaign.id}`;
   const viewLabel = webUrl ? "Read on danbenson.me" : "View in browser";
+
+  // Small "read on danbenson.me" link top-right, above the masthead — in emails (real + test)
+  // and the admin preview, not on the web copy itself.
+  const topLinkHtml =
+    webUrl && (photoMode === "link" || previewMode)
+      ? `<div class="email-pad email-toplink"><a href="${webUrl}">read on danbenson.me</a></div>`
+      : "";
+
+  // Inbox preview line (hidden in the email body). Uses the campaign's preheader if one is set,
+  // otherwise the issue's bold subtitle line ("**...**"), so the inbox shows the subtitle next to
+  // the subject instead of the first visible text (the top link / masthead). The trailing
+  // zero-width filler stops clients from appending body text after it.
+  const subtitle = campaign.markdownBody.match(/^\*\*(.+)\*\*\s*$/m)?.[1]?.trim() || "";
+  const preheaderText = (campaign.preheader || subtitle).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[c] as string);
+  const preheaderHtml = preheaderText ? preheaderText + "&#847;&zwnj;&nbsp;".repeat(90) : "";
 
   const bodyHtml = renderEmailBody(campaign.markdownBody, dimensions);
 
@@ -179,13 +196,14 @@ export function renderEmailHtml(
 <style>${emailCss(settings, theme, forceTheme)}</style>
 </head>
 <body>
-<div class="preheader">${campaign.preheader || ""}</div>
+<div class="preheader">${preheaderHtml}</div>
 <div class="email-wrapper">
 <table role="presentation" class="email-container" width="100%" cellpadding="0" cellspacing="0" align="center">
 <tbody>
 <tr><td>
 ${heroHtml}
 <div class="email-content">
+${topLinkHtml}
 ${bodyHtml}
 </div>
 <div class="email-footer">

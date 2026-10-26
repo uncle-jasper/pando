@@ -336,6 +336,12 @@ Decisions made 2026-10-03:
   `-# YYYY-MM-DD` line is rewritten to the Taipei send date and saved; test sends show the stamped
   date without saving; the Send confirm dialog says so. Archive dates follow from that line.
 
+- **Email links to danbenson.me** (`issueWebUrl()` in `lib/issues.ts`): footer "Read on
+  danbenson.me", a small right-aligned "read on danbenson.me" above the masthead (emails + admin
+  preview only, not the /p web copy), and photo links all go to `/newsletter/vol-NNN-slug/`.
+  No Vol. line → falls back to `/p/[id]` and "View in browser". Inbox preview text (hidden
+  preheader) defaults to the issue's bold `**subtitle**` line when `campaign.preheader` is empty.
+
 ## Useful entry points
 
 - `lib/dashboard.ts` / `/admin/dashboard` — usage + capacity stats and warnings
