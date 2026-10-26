@@ -36,6 +36,19 @@ export function parseVolume(markdown: string): number | null {
   return m ? parseInt(m[1], 10) : null;
 }
 
+// The issue's page on danbenson.me (served by the three-stops-archive WordPress plugin), e.g.
+// https://danbenson.me/newsletter/vol-002-yongkang/. Emails link here (footer + photos) instead
+// of Pando's own /p/[id] copy. The plugin looks issues up by volume only and 301s any other slug
+// to the canonical one, so a later title tweak never breaks a link already sent. null when the
+// body has no "-# Vol. NNN" line — callers fall back to /p/[id].
+export function issueWebUrl(campaign: { title?: string | null; markdownBody: string }): string | null {
+  const vol = parseVolume(campaign.markdownBody);
+  if (vol === null) return null;
+  const title = campaign.title || deriveTitle(campaign.markdownBody) || `Vol. ${vol}`;
+  const site = (process.env.SITE_URL || "https://danbenson.me").replace(/\/$/, "");
+  return `${site}/newsletter/vol-${String(vol).padStart(3, "0")}-${slugify(title)}/`;
+}
+
 export function slugify(title: string): string {
   const slug = title
     .toLowerCase()

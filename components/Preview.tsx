@@ -63,7 +63,7 @@ export default function Preview({ markdown, heroImageUrl, heroImageAlt, dimensio
   }, []);
 
   const footerHtml = footer
-    ? `${[footer.footerTagline || "", footer.physicalMailingAddress].filter(Boolean).join("<br>")}<div style="width:32px;border-top:1px solid var(--muted);margin:16px auto"></div>${FOOTER_REASON}<br><span style="text-decoration: underline;">View in browser</span> &middot; <span style="text-decoration: underline;">Unsubscribe</span>`
+    ? `${[footer.footerTagline || "", footer.physicalMailingAddress].filter(Boolean).join("<br>")}<div style="width:32px;border-top:1px solid var(--muted);margin:16px auto"></div>${FOOTER_REASON}<br><span style="text-decoration: underline;">${/^-#\s+Vol\.?\s*\d+\s*$/im.test(markdown) ? "Read on danbenson.me" : "View in browser"}</span> &middot; <span style="text-decoration: underline;">Unsubscribe</span>`
     : "";
 
   return (

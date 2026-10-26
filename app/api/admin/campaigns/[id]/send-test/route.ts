@@ -8,6 +8,7 @@ import { getImageDimensions } from "@/lib/imageDimensions";
 import { sendEmail } from "@/lib/resend";
 import { makePreviewKey } from "@/lib/tokens";
 import { stampSendDate } from "@/lib/sendDate";
+import { issueWebUrl } from "@/lib/issues";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -36,9 +37,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     false,
     dimensions,
     "link",
-    // Drafts aren't public, so the test email's photo links carry a signed key that lets
-    // just this draft's web page open (see makePreviewKey in lib/tokens.ts).
-    campaign.status === "draft" ? `${process.env.APP_URL || "http://localhost:3000"}/p/${campaign.id}?k=${makePreviewKey(campaign.id)}` : undefined
+    // Issues with a "-# Vol. NNN" line link to their danbenson.me page (drafts show there while
+    // you're logged into WordPress, via the archive preview key). Otherwise, drafts aren't
+    // public, so photo links carry a signed key that opens just this draft's /p page.
+    campaign.status === "draft" && !issueWebUrl(campaign) ? `${process.env.APP_URL || "http://localhost:3000"}/p/${campaign.id}?k=${makePreviewKey(campaign.id)}` : undefined
   );
 
   try {

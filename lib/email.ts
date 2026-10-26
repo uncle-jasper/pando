@@ -1,11 +1,13 @@
  import juice from "juice";
 import { FOOTER_REASON } from "./footer";
 import { renderEmailBody, type GalleryDimensions } from "./markdown/email";
+import { issueWebUrl } from "./issues";
 import { applyPhotoMode, LIGHTBOX_SNIPPET, type PhotoMode } from "./photoLightbox";
 import { makeSubscriberToken } from "./tokens";
 
 interface CampaignLike {
   id: string;
+  title?: string | null;
   subject: string;
   preheader: string | null;
   markdownBody: string;
@@ -135,7 +137,11 @@ export function renderEmailHtml(
   // so the link works before the issue is sent.
   photoLinkBase?: string
 ): string {
-  const viewInBrowserUrl = `${appUrl()}/p/${campaign.id}`;
+  // Footer + photo links go to the issue's page on danbenson.me when it has a "-# Vol. NNN"
+  // line (lib/issues.ts issueWebUrl); otherwise to Pando's own /p/[id] copy.
+  const webUrl = issueWebUrl(campaign);
+  const viewInBrowserUrl = webUrl ?? `${appUrl()}/p/${campaign.id}`;
+  const viewLabel = webUrl ? "Read on danbenson.me" : "View in browser";
 
   const bodyHtml = renderEmailBody(campaign.markdownBody, dimensions);
 
@@ -147,11 +153,11 @@ export function renderEmailHtml(
   // subscriber is null for the public "view in browser" page, where there's no
   // subscriber-specific unsubscribe link to show (you're already reading it in a browser).
   const footerLinks = subscriber
-    ? `<a href="${viewInBrowserUrl}">View in browser</a> &middot; <a href="${appUrl()}/unsubscribe/${makeSubscriberToken(
+    ? `<a href="${viewInBrowserUrl}">${viewLabel}</a> &middot; <a href="${appUrl()}/unsubscribe/${makeSubscriberToken(
         subscriber.id
       )}">Unsubscribe</a>`
         : previewMode
-      ? `<span style="text-decoration:underline">View in browser</span> &middot; <span style="text-decoration:underline">Unsubscribe</span>`
+      ? `<span style="text-decoration:underline">${viewLabel}</span> &middot; <span style="text-decoration:underline">Unsubscribe</span>`
         : "";
 
   // Top block (tagline + address), then a short divider, then the "why you're getting this"
