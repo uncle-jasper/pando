@@ -2,7 +2,7 @@
 /**
  * Plugin Name: 3 Stops from Main Archive
  * Description: Shows past issues of the "3 Stops from Main" newsletter (fetched from Pando) as a list under the signup form on /newsletter, with one page per issue at /newsletter/vol-001-title. Shows nothing until the first issue has been sent.
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: Dan Benson
  * License: GPL-2.0-or-later
  */
@@ -32,8 +32,81 @@ if (!defined('TSM_FAKE_POST_ID')) {
  * Talking to Pando (cached; falls back to the last good copy if Pando is down)
  * ---------------------------------------------------------------------- */
 
+/* -------------------------------------------------------------------------
+ * Draft preview: with the key from Pando → Settings → "Archive preview key" saved under
+ * Settings → 3 Stops Archive, logged-in editors also see draft issues (marked "Draft").
+ * Visitors never do: preview fetches skip every cache, so drafts can't leak into the
+ * public copy.
+ * ---------------------------------------------------------------------- */
+
+function tsm_preview_mode()
+{
+    return is_user_logged_in() && current_user_can('edit_pages') && get_option('tsm_preview_key', '') !== '';
+}
+
+add_action('admin_menu', function () {
+    add_options_page('3 Stops Archive', '3 Stops Archive', 'manage_options', 'tsm-archive', function () {
+        ?>
+        <div class="wrap">
+            <h1>3 Stops Archive</h1>
+            <form method="post" action="options.php">
+                <?php settings_fields('tsm_archive'); ?>
+                <table class="form-table" role="presentation">
+                    <tr>
+                        <th scope="row"><label for="tsm_preview_key">Preview key</label></th>
+                        <td>
+                            <input name="tsm_preview_key" id="tsm_preview_key" type="text" class="regular-text code"
+                                value="<?php echo esc_attr(get_option('tsm_preview_key', '')); ?>">
+                            <p class="description">Copy it from Pando → Settings → Archive preview key. While it's set,
+                                you (logged in) also see draft issues on the newsletter page. Visitors only see sent issues.
+                                Clear it to turn preview off.</p>
+                        </td>
+                    </tr>
+                </table>
+                <?php submit_button(); ?>
+            </form>
+        </div>
+        <?php
+    });
+});
+
+add_action('admin_init', function () {
+    register_setting('tsm_archive', 'tsm_preview_key', array(
+        'type' => 'string',
+        'sanitize_callback' => function ($v) {
+            return preg_replace('/[^a-f0-9]/', '', strtolower((string) $v));
+        },
+        'default' => '',
+    ));
+});
+
+function tsm_api_preview($path)
+{
+    $response = wp_remote_get(rtrim(TSM_PANDO_URL, '/') . '/api/public' . $path, array(
+        'timeout' => 8,
+        'headers' => array('Accept' => 'application/json', 'X-Pando-Preview' => get_option('tsm_preview_key', '')),
+    ));
+    if (is_wp_error($response)) {
+        return null;
+    }
+    $code = wp_remote_retrieve_response_code($response);
+    if ($code === 404) {
+        return array('_missing' => true);
+    }
+    $data = $code === 200 ? json_decode(wp_remote_retrieve_body($response), true) : null;
+    return is_array($data) ? $data : null;
+}
+
+function tsm_preview_banner()
+{
+    return '<p class="tsm-preview-note">Preview — draft issues are visible only to you while you\'re logged in.</p>';
+}
+
 function tsm_api($path)
 {
+    if (tsm_preview_mode()) {
+        return tsm_api_preview($path);
+    }
     $key = 'tsm_' . md5($path);
     $fresh = get_transient($key);
     if ($fresh !== false) {
@@ -142,6 +215,9 @@ add_filter('the_posts', function ($posts, $query) {
     }
 
     $GLOBALS['tsm_issue'] = $data;
+    if (tsm_preview_mode()) {
+        nocache_headers();
+    }
 
     $post = new WP_Post((object) array(
         'ID' => TSM_FAKE_POST_ID,
@@ -208,6 +284,9 @@ add_action('wp_head', function () {
     }
     $i = $data['issue'];
     $url = tsm_issue_path($i['vol'], $i['slug']);
+    if (!empty($i['draft'])) {
+        echo "\n<meta name=\"robots\" content=\"noindex\" />";
+    }
     echo "\n<link rel=\"canonical\" href=\"" . esc_url($url) . "\" />\n";
     echo '<meta name="description" content="' . esc_attr($i['excerpt']) . "\" />\n";
     echo '<meta property="og:type" content="article" />' . "\n";
@@ -264,6 +343,8 @@ function tsm_styles()
 .tsm-pager a { text-decoration: none; }
 .tsm-pager a:hover { text-decoration: underline; }
 .tsm-pager .tsm-all { flex-basis: 100%; text-align: center; order: 3; opacity: .75; }
+.tsm-preview-note { font-size: .8em; opacity: .7; border: 1px dashed currentColor; padding: 6px 10px; margin: 0 0 1.5em; }
+.tsm-draft { text-transform: uppercase; letter-spacing: .05em; font-size: .9em; border: 1px solid currentColor; padding: 0 4px; margin-right: 6px; }
 .tsm-subscribe { margin: 3em 0 1em; text-align: center; }
 .tsm-subscribe p { margin: 0; }
 .pando-signup-widget { max-width: 480px; margin: 2em auto 0; font-family: Inconsolata, sans-serif; }
@@ -291,7 +372,8 @@ function tsm_render_archive()
     }
 
     $out = tsm_styles();
-    $out .= '<section class="tsm-archive"><h2 class="tsm-archive-title">Past issues</h2><ul class="tsm-list">';
+    $out .= '<section class="tsm-archive">' . (tsm_preview_mode() ? tsm_preview_banner() : '')
+        . '<h2 class="tsm-archive-title">Past issues</h2><ul class="tsm-list">';
     foreach ($data['issues'] as $i) {
         $url = tsm_issue_path($i['vol'], $i['slug']);
         $out .= '<li class="tsm-item">';
@@ -302,7 +384,7 @@ function tsm_render_archive()
             $out .= '<div class="tsm-thumb-empty"></div>';
         }
         $out .= '</a><div class="tsm-text">';
-        $out .= '<p class="tsm-vol">' . esc_html(sprintf('Vol. %03d · %s', (int) $i['vol'], tsm_pretty_date($i['date']))) . '</p>';
+        $out .= '<p class="tsm-vol">' . (!empty($i['draft']) ? '<span class="tsm-draft">Draft</span>' : '') . esc_html(sprintf('Vol. %03d · %s', (int) $i['vol'], tsm_pretty_date($i['date']))) . '</p>';
         $out .= '<a class="tsm-item-title" href="' . esc_url($url) . '">' . esc_html($i['title']) . '</a>';
         $out .= '</div></li>';
     }
@@ -316,6 +398,9 @@ function tsm_render_issue($data)
     $body = wp_kses_post($issue['bodyHtml']);
 
     $out = tsm_styles();
+    if (tsm_preview_mode()) {
+        $out .= tsm_preview_banner();
+    }
     $out .= '<div class="tsm-issue">' . $body . '</div>';
 
     $links = array();
@@ -337,6 +422,7 @@ function tsm_render_issue($data)
     $out .= '<div class="tsm-subscribe"><p>Enjoyed this? Get the next one in your inbox.</p>'
         . '<script src="' . esc_url(rtrim(TSM_PANDO_URL, '/') . '/widget.js') . '"></script></div>';
 
+    $out .= tsm_lightbox();
     return $out;
 }
 
@@ -361,3 +447,89 @@ add_filter('the_content', function ($content) {
 add_shortcode('three_stops_archive', function () {
     return tsm_render_archive();
 });
+
+/* -------------------------------------------------------------------------
+ * Photo lightbox on issue pages: click any photo to view it large; arrows / swipe / arrow
+ * keys step through every photo in the issue; X, Esc or a tap outside closes it and leaves
+ * you on that photo. A #photo-N in the URL opens photo N directly (same numbering Pando's
+ * emails use). Same behavior as Pando's own lib/photoLightbox.ts — keep them in step.
+ * ---------------------------------------------------------------------- */
+
+function tsm_lightbox()
+{
+    return <<<'LIGHTBOX'
+<style>
+.tsm-issue img{cursor:zoom-in}
+.tsm-issue a img{cursor:pointer}
+.tsm-lb{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;color:#eee;-webkit-user-select:none;user-select:none}
+.tsm-lb[hidden]{display:none}
+.tsm-lb-fig{margin:0;display:flex;flex-direction:column;align-items:center;max-width:94vw}
+.tsm-lb-img{max-width:94vw;max-height:84vh;width:auto;height:auto;object-fit:contain;display:block}
+.tsm-lb-cap{font-size:13px;color:#bbb;margin-top:10px;text-align:center;min-height:1em;padding:0 12px}
+.tsm-lb .tsm-lb-btn{position:absolute;background:none;border:0;color:#eee;font:inherit;cursor:pointer;opacity:.75;padding:12px 16px;line-height:1;box-shadow:none}
+.tsm-lb .tsm-lb-btn:hover,.tsm-lb .tsm-lb-btn:focus-visible{opacity:1;background:none}
+.tsm-lb .tsm-lb-close{top:6px;right:6px;font-size:26px}
+.tsm-lb .tsm-lb-prev,.tsm-lb .tsm-lb-next{top:50%;transform:translateY(-50%);font-size:44px}
+.tsm-lb .tsm-lb-prev{left:2px}.tsm-lb .tsm-lb-next{right:2px}
+.tsm-lb-count{position:absolute;top:16px;left:18px;font-size:13px;color:#aaa}
+@media (max-width:600px){.tsm-lb .tsm-lb-prev,.tsm-lb .tsm-lb-next{top:auto;bottom:8px;transform:none}}
+</style>
+<script>
+(function(){
+  var imgs=[].slice.call(document.querySelectorAll('.tsm-issue img'));
+  if(!imgs.length)return;
+  var box=document.createElement('div');
+  box.className='tsm-lb';box.hidden=true;box.setAttribute('role','dialog');box.setAttribute('aria-modal','true');
+  box.innerHTML='<div class="tsm-lb-count"></div><button class="tsm-lb-btn tsm-lb-close" aria-label="Close">\u2715</button>'+
+    '<button class="tsm-lb-btn tsm-lb-prev" aria-label="Previous photo">\u2039</button>'+
+    '<figure class="tsm-lb-fig"><img class="tsm-lb-img" alt=""><figcaption class="tsm-lb-cap"></figcaption></figure>'+
+    '<button class="tsm-lb-btn tsm-lb-next" aria-label="Next photo">\u203a</button>';
+  document.body.appendChild(box);
+  var big=box.querySelector('.tsm-lb-img'),cap=box.querySelector('.tsm-lb-cap'),count=box.querySelector('.tsm-lb-count');
+  var prev=box.querySelector('.tsm-lb-prev'),next=box.querySelector('.tsm-lb-next');
+  if(imgs.length<2){prev.style.display='none';next.style.display='none';}
+  var cur=0;
+  function show(i){
+    cur=(i+imgs.length)%imgs.length;
+    var s=imgs[cur];
+    big.src=s.currentSrc||s.src;big.alt=s.alt||'';
+    cap.textContent=s.alt||'';
+    count.textContent=imgs.length>1?(cur+1)+' / '+imgs.length:'';
+    box.hidden=false;document.documentElement.style.overflow='hidden';
+    [cur-1,cur+1].forEach(function(j){var p=imgs[(j+imgs.length)%imgs.length];new Image().src=p.currentSrc||p.src;});
+  }
+  function close(){
+    box.hidden=true;document.documentElement.style.overflow='';
+    if(location.hash)history.replaceState(null,'',location.pathname+location.search);
+    imgs[cur].scrollIntoView({block:'center'});
+  }
+  imgs.forEach(function(im,i){
+    if(im.closest('a'))return;
+    im.addEventListener('click',function(){show(i);});
+  });
+  box.querySelector('.tsm-lb-close').addEventListener('click',close);
+  prev.addEventListener('click',function(e){e.stopPropagation();show(cur-1);});
+  next.addEventListener('click',function(e){e.stopPropagation();show(cur+1);});
+  box.addEventListener('click',function(e){if(e.target===box||e.target.className==='tsm-lb-fig')close();});
+  document.addEventListener('keydown',function(e){
+    if(box.hidden)return;
+    if(e.key==='Escape')close();
+    else if(e.key==='ArrowLeft')show(cur-1);
+    else if(e.key==='ArrowRight')show(cur+1);
+  });
+  var x0=null;
+  box.addEventListener('touchstart',function(e){x0=e.touches[0].clientX;},{passive:true});
+  box.addEventListener('touchend',function(e){
+    if(x0===null)return;var dx=e.changedTouches[0].clientX-x0;x0=null;
+    if(Math.abs(dx)>50)show(dx<0?cur+1:cur-1);
+  });
+  function fromHash(){
+    var m=location.hash.match(/^#photo-(\d+)$/);if(!m)return;
+    var i=parseInt(m[1],10)-1;if(i>=0&&i<imgs.length){imgs[i].scrollIntoView({block:'center'});show(i);}
+  }
+  window.addEventListener('hashchange',fromHash);
+  fromHash();
+})();
+</script>
+LIGHTBOX;
+}

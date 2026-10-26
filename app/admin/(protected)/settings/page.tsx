@@ -185,6 +185,7 @@ export default function SettingsPage() {
           {saved ? "Saved" : "Save"}
         </button>
       </form>
+      <ArchivePreviewKey />
 
       <div className="w-72">
         <div className="flex items-center justify-between mb-2">
@@ -207,6 +208,48 @@ export default function SettingsPage() {
             {settings.physicalMailingAddress || "Mailing address"}
           </p>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Key for the danbenson.me archive plugin's draft preview (WordPress → Settings → 3 Stops
+// Archive). With it pasted there, draft issues show on the real site — only to you while
+// you're logged into WordPress. See makeArchivePreviewKey in lib/tokens.ts.
+function ArchivePreviewKey() {
+  const [key, setKey] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/archive-preview-key")
+      .then((r) => r.json())
+      .then((row: { key: string }) => setKey(row.key))
+      .catch(() => {});
+  }, []);
+
+  return (
+    <div className="flex flex-col gap-2 max-w-lg">
+      <h2 className="text-sm font-semibold">Archive preview key</h2>
+      <p className="text-xs text-[var(--muted)]">
+        Paste this into WordPress → Settings → 3 Stops Archive. Then, while you&apos;re logged into
+        WordPress, danbenson.me/newsletter shows your draft issues too (marked &quot;Draft&quot;), so
+        you can see the archive and issue pages before sending. Visitors only ever see sent issues.
+      </p>
+      <div className="flex gap-2 items-center">
+        <code className="flex-1 text-xs px-2 py-1 border border-[var(--border)] rounded truncate">{key || "…"}</code>
+        <button
+          type="button"
+          disabled={!key}
+          onClick={() => {
+            navigator.clipboard.writeText(key).then(() => {
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+            });
+          }}
+          className="px-2 py-1 text-sm border border-[var(--border)] rounded disabled:opacity-50"
+        >
+          {copied ? "Copied" : "Copy"}
+        </button>
       </div>
     </div>
   );

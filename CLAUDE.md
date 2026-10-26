@@ -314,6 +314,24 @@ Decisions made 2026-10-03:
 - Later: make `/p/[campaignId]` (the view-in-browser link in already-sent emails) 301-redirect to the
   matching danbenson.me issue, so old emails keep working. Until then it keeps serving from Pando.
 
+## Photo lightbox + archive draft preview (2026-10-26)
+
+- **Email photos → web lightbox.** Email clients can't run a lightbox (no JS; Gmail strips the
+  CSS-checkbox hacks). `lib/photoLightbox.ts`: in sent/test emails (`photoMode "link"`) every
+  photo — hero, inline, gallery, full-bleed — links to `/p/[id]#photo-N`; `/p/[id]` and the admin
+  preview (`"lightbox"`) number the same photos and open them in a lightbox (X/Esc/tap-out to
+  close, arrows/swipe/keys through ALL photos in the issue). Gallery photos no longer link to the
+  raw file. Test emails link to `/p/[id]?k=<makePreviewKey>` so the draft page opens pre-send.
+  The WordPress plugin's issue pages have the same lightbox (`tsm_lightbox()`, `.tsm-issue img`).
+- **Archive draft preview.** `/api/public/issues*` include drafts (flagged `draft: true`) when
+  the request carries `X-Pando-Preview: <makeArchivePreviewKey()>` (shown in Pando → Settings →
+  Archive preview key). Plugin v1.1.0 stores it under WP Settings → 3 Stops Archive and sends it
+  only for logged-in editors, bypassing all WP caches — visitors never see drafts.
+- **Campaign Duplicate** (list rows + sent-campaign page): `POST /api/admin/campaigns
+  { duplicateOf }`.
+- **Editor preview patches changed blocks only** (`components/Preview.tsx`) instead of replacing
+  innerHTML each keystroke, which recreated every <img> and made the pane jump.
+
 ## Useful entry points
 
 - `lib/dashboard.ts` / `/admin/dashboard` — usage + capacity stats and warnings

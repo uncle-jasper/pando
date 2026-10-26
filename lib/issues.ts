@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, ne } from "drizzle-orm";
 import { db } from "./db";
 import { campaigns } from "./schema";
 import { deriveTitle, parseMarkdown } from "./markdown/parse";
@@ -17,6 +17,7 @@ export interface IssueSummary {
   excerpt: string;
   thumbnailUrl: string | null; // small (640px) version for list pages
   ogImageUrl: string | null; // 1200px version for link previews
+  draft?: boolean; // only ever true in preview mode (see getSentIssues' includeDrafts)
 }
 
 export interface IssueDetail extends IssueSummary {
@@ -120,19 +121,28 @@ function toDetail(row: Row, vol: number, origin: string): IssueDetail {
 
 // All sent issues that carry a "Vol. NNN" line, newest volume first. If two campaigns claim the
 // same volume, the most recently sent one wins.
-export async function getSentIssues(origin: string): Promise<IssueDetail[]> {
-  const rows = await db
+// includeDrafts (preview mode only — verified X-Pando-Preview key, see lib/tokens.ts) also
+// lists unsent issues, flagged draft: true. A sent issue always beats a draft of the same
+// volume; among drafts, the most recently edited wins.
+export async function getSentIssues(origin: string, includeDrafts = false): Promise<IssueDetail[]> {
+  const sentRows = await db
     .select()
     .from(campaigns)
     .where(eq(campaigns.status, "sent"))
     .orderBy(desc(campaigns.sentAt));
+  const draftRows = includeDrafts
+    ? await db.select().from(campaigns).where(ne(campaigns.status, "sent")).orderBy(desc(campaigns.updatedAt))
+    : [];
+  const rows = [...sentRows, ...draftRows];
   const seen = new Set<number>();
   const out: IssueDetail[] = [];
   for (const row of rows) {
     const vol = parseVolume(row.markdownBody);
     if (vol === null || seen.has(vol)) continue;
     seen.add(vol);
-    out.push(toDetail(row, vol, origin));
+    const detail = toDetail(row, vol, origin);
+    if (row.status !== "sent") detail.draft = true;
+    out.push(detail);
   }
   return out.sort((a, b) => b.vol - a.vol);
 }

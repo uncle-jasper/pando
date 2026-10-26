@@ -33,3 +33,18 @@ export function verifyPreviewKey(campaignId: string, key: string): boolean {
   const b = Buffer.from(makePreviewKey(campaignId));
   return a.length === b.length && timingSafeEqual(a, b);
 }
+
+// Key that lets the danbenson.me archive plugin also see DRAFT issues (with a "-# Vol. NNN"
+// line), so Dan can preview the archive and issue pages before launch. The plugin sends it in
+// an X-Pando-Preview header, and only when a logged-in WordPress editor is viewing — visitors
+// never see drafts. Shown in Pando → Settings for pasting into the plugin's settings.
+export function makeArchivePreviewKey(): string {
+  return sign("archive-preview");
+}
+
+export function verifyArchivePreviewKey(key: string | null): boolean {
+  if (!key) return false;
+  const a = Buffer.from(key);
+  const b = Buffer.from(makeArchivePreviewKey());
+  return a.length === b.length && timingSafeEqual(a, b);
+}
