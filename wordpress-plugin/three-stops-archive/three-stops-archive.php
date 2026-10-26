@@ -2,7 +2,7 @@
 /**
  * Plugin Name: 3 Stops from Main Archive
  * Description: Shows past issues of the "3 Stops from Main" newsletter (fetched from Pando) as a list under the signup form on /newsletter, with one page per issue at /newsletter/vol-001-title. Shows nothing until the first issue has been sent.
- * Version: 1.2.1
+ * Version: 1.2.2
  * Author: Dan Benson
  * License: GPL-2.0-or-later
  */
@@ -354,7 +354,8 @@ function tsm_styles()
 .tsm-issue h3 { margin: 1.4em 0 .5em; line-height: 1.3; }
 .tsm-issue img { max-width: 100%; height: auto; display: block; }
 .tsm-issue .hero-image { width: 100%; margin: 0 0 1.5em; }
-.tsm-issue p.meta-text { font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; opacity: .55; line-height: 1.6; margin: 0 0 1em; }
+/* Masthead lines: kept exactly as typed (Dan writes them lowercase on purpose), like the email. */
+.tsm-issue p.meta-text { font-size: .8em; letter-spacing: normal; text-transform: none; opacity: .6; line-height: 1.6; margin: 0 0 1em; }
 .tsm-issue .full-bleed-image { width: 100%; margin: 1.5em 0 0; }
 .tsm-issue .full-bleed-caption, .tsm-issue .image-caption { display: block; font-size: .8em; opacity: .65; margin: 6px 0 1.5em; text-align: center; }
 .tsm-issue .full-bleed-image + :not(.full-bleed-caption) { margin-top: 1.5em; }
