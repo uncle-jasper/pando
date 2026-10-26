@@ -12,6 +12,7 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import StatusLine from "@/components/StatusLine";
 import EmailPreviewModal from "@/components/EmailPreviewModal";
 import type { GalleryDimensions } from "@/lib/markdown/parse";
+import { hasDateLine, todayInTaipei } from "@/lib/sendDate";
 
 interface Campaign {
   id: string;
@@ -375,7 +376,9 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
 
       <ConfirmDialog
         open={confirmSendOpen}
-        message={`Send this campaign to ${subscribedCount ?? "…"} subscribed recipient${subscribedCount === 1 ? "" : "s"}? This cannot be undone.`}
+        message={`Send this campaign to ${subscribedCount ?? "…"} subscribed recipient${subscribedCount === 1 ? "" : "s"}?${
+          hasDateLine(markdown) ? ` The date line will be set to today, ${todayInTaipei()}.` : ""
+        } This cannot be undone.`}
         confirmLabel="Send"
         onConfirm={handleSendCampaign}
         onCancel={() => setConfirmSendOpen(false)}

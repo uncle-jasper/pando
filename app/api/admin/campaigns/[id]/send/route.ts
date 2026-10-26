@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { campaigns, subscribers } from "@/lib/schema";
 import { getOrCreateSettings } from "@/lib/settings";
 import { sendCampaignBatch } from "@/lib/sendCampaign";
+import { stampSendDate } from "@/lib/sendDate";
 
 // Opt into Vercel Hobby's maximum allowed duration (default is much shorter) — a
 // full batch of concurrent sends should finish in seconds, but this gives headroom
@@ -38,6 +39,13 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   // Sends the first batch (up to SEND_BATCH_SIZE) immediately, so small lists finish
   // in one request as before. If the list is larger, the campaign stays in "sending"
   // status and the daily cron (app/api/cron/send-batches) continues it automatically.
+  // Set the masthead's "-# YYYY-MM-DD" line to today's date before anything goes out, and save
+  // it — later batches (cron) and the archive then all use the same, real send date.
+  const stamped = stampSendDate(campaign.markdownBody);
+  if (stamped !== campaign.markdownBody) {
+    await db.update(campaigns).set({ markdownBody: stamped, updatedAt: new Date() }).where(eq(campaigns.id, id));
+  }
+
   const result = await sendCampaignBatch(id);
   return NextResponse.json(result);
 }

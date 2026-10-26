@@ -332,6 +332,10 @@ Decisions made 2026-10-03:
 - **Editor preview patches changed blocks only** (`components/Preview.tsx`) instead of replacing
   innerHTML each keystroke, which recreated every <img> and made the pane jump.
 
+- **Send date is stamped automatically** (`lib/sendDate.ts`): on the real send, the first
+  `-# YYYY-MM-DD` line is rewritten to the Taipei send date and saved; test sends show the stamped
+  date without saving; the Send confirm dialog says so. Archive dates follow from that line.
+
 ## Useful entry points
 
 - `lib/dashboard.ts` / `/admin/dashboard` — usage + capacity stats and warnings

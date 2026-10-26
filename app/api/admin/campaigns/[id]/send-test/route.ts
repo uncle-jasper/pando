@@ -7,6 +7,7 @@ import { renderEmailHtml } from "@/lib/email";
 import { getImageDimensions } from "@/lib/imageDimensions";
 import { sendEmail } from "@/lib/resend";
 import { makePreviewKey } from "@/lib/tokens";
+import { stampSendDate } from "@/lib/sendDate";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -25,8 +26,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   const dimensions = await getImageDimensions();
+  // Show the date the real send will stamp in (see lib/sendDate.ts), without saving it.
   const html = renderEmailHtml(
-    campaign,
+    { ...campaign, markdownBody: campaign.status === "draft" ? stampSendDate(campaign.markdownBody) : campaign.markdownBody },
     null,
     settings,
     "light",
