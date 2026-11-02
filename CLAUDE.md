@@ -248,7 +248,7 @@ live in the `LIMITS` constant at the top of `lib/dashboard.ts`; update them if a
 changes its plans. Deliberately NO open/click tracking (privacy-first setup, noisy at this size).
 Caveats: "emails sent" counts only newsletter sends (not tests or signup confirmations), so it
 runs slightly low; "photo transfer" is an ESTIMATE (image weight of the latest issue x active
-subscribers x 2 issues/month) because Vercel does not expose transfer to the app.
+subscribers x 1 issue/month — roughly monthly as of 2026-11) because Vercel does not expose transfer to the app.
 
 ## Free-tier limits and when to upgrade (verified 2026-10-03)
 
@@ -335,6 +335,17 @@ Decisions made 2026-10-03:
 - **Send date is stamped automatically** (`lib/sendDate.ts`): on the real send, the first
   `-# YYYY-MM-DD` line is rewritten to the Taipei send date and saved; test sends show the stamped
   date without saving; the Send confirm dialog says so. Archive dates follow from that line.
+
+- **Scheduled sends** (2026-11-02): campaign editor → "Schedule…" picks a Taipei calendar DATE
+  (no time). The daily cron now runs at `0 13 * * *` = 9 PM Taipei (Hobby crons fire anywhere in
+  that hour, so 9:00–9:59 PM) and, after resuming any `sending` campaigns, starts every draft whose
+  date has arrived (`<=` today, so a missed run catches up). Dates live in a separate
+  `campaign_schedules` table created on first use (`CREATE TABLE IF NOT EXISTS` in
+  `lib/schedule.ts`) — deliberately NOT a column on `campaigns`, so no `drizzle-kit push` is needed.
+  Send-now and scheduled sends share `lib/startSend.ts` (validation, date stamp, clear schedule,
+  first batch). A scheduled send that fails validation is unscheduled and emails
+  `settings.notifyEmail`. "Send now" on a scheduled draft replaces the schedule. Edits to a
+  scheduled draft are fine up to the send. Newsletter cadence is roughly monthly.
 
 - **Email links to danbenson.me** (`issueWebUrl()` in `lib/issues.ts`): footer "Read on
   danbenson.me", a small right-aligned "read on danbenson.me" above the masthead (emails + admin

@@ -3,10 +3,12 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { campaigns, templates } from "@/lib/schema";
 import { deriveTitle } from "@/lib/markdown/parse";
+import { getAllSchedules } from "@/lib/schedule";
 
 export async function GET() {
   const rows = await db.select().from(campaigns).orderBy(desc(campaigns.updatedAt));
-  return NextResponse.json(rows);
+  const schedules = await getAllSchedules();
+  return NextResponse.json(rows.map((r) => ({ ...r, sendOn: schedules[r.id] ?? null })));
 }
 
 export async function POST(req: NextRequest) {

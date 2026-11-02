@@ -9,6 +9,7 @@ interface Campaign {
   title: string;
   subject: string;
   status: "draft" | "sending" | "sent";
+  sendOn?: string | null;
   updatedAt: string;
 }
 
@@ -140,7 +141,7 @@ export default function CampaignsPage() {
                   {c.title || "(untitled)"}
                 </td>
                 <td className="py-2 cursor-pointer" onClick={() => router.push(`/admin/campaigns/${c.id}`)}>
-                  {c.status}
+                  {c.status === "draft" && c.sendOn ? `scheduled · ${formatSendOn(c.sendOn)}` : c.status}
                 </td>
                 <td className="py-2 cursor-pointer" onClick={() => router.push(`/admin/campaigns/${c.id}`)}>
                   {new Date(c.updatedAt).toLocaleString()}
@@ -183,4 +184,10 @@ export default function CampaignsPage() {
       />
     </div>
   );
+}
+
+// "2026-11-13" → "Fri, Nov 13"
+function formatSendOn(date: string): string {
+  const d = new Date(`${date}T12:00:00Z`);
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
 }

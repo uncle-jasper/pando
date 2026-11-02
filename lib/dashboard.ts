@@ -16,7 +16,7 @@ export const LIMITS = {
 };
 
 // Assumption behind the photo-transfer estimate: issues per month.
-const ASSUMED_ISSUES_PER_MONTH = 2;
+const ASSUMED_ISSUES_PER_MONTH = 1; // roughly monthly, per Dan (2026-11)
 
 export type Level = "ok" | "watch" | "high";
 
@@ -225,7 +225,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       estimatedMonthlyTransfer,
       LIMITS.blobTransferBytes,
       "bytes",
-      `Estimate only: ${formatBytes(issueImageBytes)} of photos per issue × ${subscribed} subscribers × ${ASSUMED_ISSUES_PER_MONTH} issues a month. Vercel free tier: 10 GB a month. Real usage is on Vercel's usage page.`
+      `Estimate only: ${formatBytes(issueImageBytes)} of photos per issue × ${subscribed} subscribers × ${ASSUMED_ISSUES_PER_MONTH} issue${ASSUMED_ISSUES_PER_MONTH === 1 ? "" : "s"} a month. Vercel free tier: 10 GB a month. Real usage is on Vercel's usage page.`
     ),
   ];
   if (dbBytes !== null) {

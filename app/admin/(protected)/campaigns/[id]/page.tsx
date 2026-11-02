@@ -40,6 +40,12 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
   const [sending, setSending] = useState(false);
   const [sendStatus, setSendStatus] = useState<{ message: string; tone: "info" | "error" | "success" } | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  // Scheduled send date (Taipei calendar day, "YYYY-MM-DD") — see lib/schedule.ts. The daily
+  // cron sends it at ~9 PM Taipei on that date.
+  const [sendOn, setSendOn] = useState<string | null>(null);
+  const [pickingDate, setPickingDate] = useState(false);
+  const [dateInput, setDateInput] = useState("");
+  const [scheduleStatus, setScheduleStatus] = useState<{ message: string; tone: "info" | "error" | "success" } | null>(null);
   // Real dimensions for every uploaded image, keyed by URL — feeds the Preview pane's
   // no-crop gallery layout (see GalleryDimensions in lib/markdown/parse.ts). Seeded from
   // the full image library on load, then kept current as new images get uploaded/picked
@@ -67,6 +73,10 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
         setHeroImageUrl(row.heroImageUrl || "");
         loaded.current = true;
       });
+    fetch(`/api/admin/campaigns/${id}/schedule`)
+      .then((r) => r.json())
+      .then((body: { sendOn: string | null }) => setSendOn(body.sendOn ?? null))
+      .catch(() => {});
     fetch("/api/admin/subscribers")
       .then((r) => r.json())
       .then((rows: { status: string }[]) => {
@@ -235,6 +245,31 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
     }
   }
 
+  async function handleSaveSchedule() {
+    setScheduleStatus({ message: "scheduling…", tone: "info" });
+    const res = await fetch(`/api/admin/campaigns/${id}/schedule`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sendOn: dateInput }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (res.ok) {
+      setSendOn(body.sendOn);
+      setPickingDate(false);
+      setScheduleStatus(null);
+    } else {
+      setScheduleStatus({ message: body.error || "couldn't schedule.", tone: "error" });
+    }
+  }
+
+  async function handleUnschedule() {
+    const res = await fetch(`/api/admin/campaigns/${id}/schedule`, { method: "DELETE" });
+    if (res.ok) {
+      setSendOn(null);
+      setScheduleStatus({ message: "unscheduled.", tone: "success" });
+    }
+  }
+
   if (!campaign) {
     return <p className="p-6 text-sm text-[var(--muted)]">Loading…</p>;
   }
@@ -351,12 +386,62 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
         </button>
         <StatusLine message={testStatus?.message ?? null} tone={testStatus?.tone} />
 
+        {sendOn && !pickingDate ? (
+          <span className="flex items-center gap-2 text-sm">
+            <span>Scheduled: {formatSendOn(sendOn)}, ~9 PM Taipei</span>
+            <button
+              onClick={() => {
+                setDateInput(sendOn);
+                setPickingDate(true);
+              }}
+              className="text-xs text-[var(--muted)] underline"
+            >
+              Change
+            </button>
+            <button onClick={handleUnschedule} className="text-xs text-[var(--muted)] hover:text-red-500 underline">
+              Unschedule
+            </button>
+          </span>
+        ) : pickingDate ? (
+          <span className="flex items-center gap-1">
+            <input
+              type="date"
+              value={dateInput}
+              min={todayInTaipei()}
+              onChange={(e) => setDateInput(e.target.value)}
+              className="px-2 py-1 text-sm border border-[var(--border)] rounded bg-transparent"
+            />
+            <button
+              onClick={handleSaveSchedule}
+              disabled={!dateInput}
+              className="px-2 py-1 text-sm border border-[var(--border)] rounded disabled:opacity-50"
+            >
+              Schedule
+            </button>
+            <button onClick={() => setPickingDate(false)} className="text-xs text-[var(--muted)] underline">
+              Cancel
+            </button>
+          </span>
+        ) : (
+          <button
+            onClick={() => {
+              setDateInput(todayInTaipei());
+              setScheduleStatus(null);
+              setPickingDate(true);
+            }}
+            className="px-2 py-1 text-sm border border-[var(--border)] rounded"
+          >
+            Schedule…
+          </button>
+        )}
+        <StatusLine message={scheduleStatus?.message ?? null} tone={scheduleStatus?.tone} />
+
         <button
           onClick={() => setConfirmSendOpen(true)}
           disabled={sending}
           className="px-3 py-1.5 text-sm rounded bg-[var(--accent)] text-white disabled:opacity-50"
         >
-          {sending ? "Sending…" : "Send campaign"}
+          {sending ? "Sending…" : sendOn ? "Send now" : "Send campaign"}
         </button>
         <StatusLine message={sendStatus?.message ?? null} tone={sendStatus?.tone} />
       </div>
@@ -378,7 +463,7 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
         open={confirmSendOpen}
         message={`Send this campaign to ${subscribedCount ?? "…"} subscribed recipient${subscribedCount === 1 ? "" : "s"}?${
           hasDateLine(markdown) ? ` The date line will be set to today, ${todayInTaipei()}.` : ""
-        } This cannot be undone.`}
+        }${sendOn ? " This replaces the scheduled send." : ""} This cannot be undone.`}
         confirmLabel="Send"
         onConfirm={handleSendCampaign}
         onCancel={() => setConfirmSendOpen(false)}
@@ -395,4 +480,10 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
       {showPreview && <EmailPreviewModal campaignId={id} onClose={() => setShowPreview(false)} />}
     </div>
   );
+}
+
+// "2026-11-13" → "Fri, Nov 13"
+function formatSendOn(date: string): string {
+  const d = new Date(`${date}T12:00:00Z`);
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
 }
