@@ -143,6 +143,54 @@ export default function DashboardPage() {
         <p className="text-sm text-[var(--muted)] mb-8">Nothing sent yet.</p>
       )}
 
+      <h2 className="text-sm font-semibold mb-2">All issues</h2>
+      {stats.issues.length > 0 ? (
+        <div className="mb-8 max-w-4xl overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-[var(--muted)] border-b border-[var(--border)]">
+                <th className="py-2 pr-3 font-normal">Vol.</th>
+                <th className="py-2 pr-3 font-normal">Title</th>
+                <th className="py-2 pr-3 font-normal">Sent</th>
+                <th className="py-2 pr-3 font-normal text-right">Recipients</th>
+                <th className="py-2 pr-3 font-normal text-right">Delivered</th>
+                <th className="py-2 pr-3 font-normal text-right">Bounced / failed</th>
+                <th className="py-2 font-normal text-right">Unsubs, 7 days</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stats.issues.map((i) => (
+                <tr key={i.id} className="border-b border-[var(--border)]">
+                  <td className="py-2 pr-3 whitespace-nowrap">{i.vol !== null ? String(i.vol).padStart(3, "0") : "—"}</td>
+                  <td className="py-2 pr-3">
+                    {i.webUrl ? (
+                      <a href={i.webUrl} target="_blank" rel="noreferrer" className="underline">
+                        {i.title}
+                      </a>
+                    ) : (
+                      i.title
+                    )}
+                  </td>
+                  <td className="py-2 pr-3 whitespace-nowrap">
+                    {i.startedAt ? formatTaipei(i.startedAt) : "—"}
+                    {i.status === "sending" && <span className="text-[var(--muted)]"> · still sending</span>}
+                  </td>
+                  <td className="py-2 pr-3 text-right">{i.recipients.toLocaleString()}</td>
+                  <td className="py-2 pr-3 text-right">{i.delivered.toLocaleString()}</td>
+                  <td className="py-2 pr-3 text-right">
+                    {i.bounced} / {i.failed}
+                  </td>
+                  <td className="py-2 text-right">{i.unsubscribedWithin7Days ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="text-xs text-[var(--muted)] mt-2">Times are Taipei. Opens and clicks aren&apos;t tracked.</p>
+        </div>
+      ) : (
+        <p className="text-sm text-[var(--muted)] mb-8">Nothing sent yet.</p>
+      )}
+
       <h2 className="text-sm font-semibold mb-2">Capacity (free plans)</h2>
       <p className="text-xs text-[var(--muted)] mb-3 max-w-xl">
         At your list size, a full send takes about {stats.daysToSendList} day{stats.daysToSendList === 1 ? "" : "s"} on the free
@@ -155,4 +203,16 @@ export default function DashboardPage() {
       <p className="text-xs text-[var(--muted)] mt-6">Updated {new Date(stats.generatedAt).toLocaleString()}</p>
     </div>
   );
+}
+
+// "2026-11-13T13:04:00Z" → "Nov 13, 2026, 9:04 PM" in Taipei time
+function formatTaipei(iso: string): string {
+  return new Date(iso).toLocaleString("en-US", {
+    timeZone: "Asia/Taipei",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }

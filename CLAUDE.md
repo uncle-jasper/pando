@@ -241,7 +241,9 @@ parallel in `lib/markdown/parse.ts` (browser preview) and `lib/markdown/email.ts
 ## Dashboard (`/admin/dashboard`, the post-login landing page)
 
 Read-only status page: audience counts, 30-day net change, weekly signup bars, last-issue
-delivery stats, and "capacity" gauges against the free-tier limits below, plus plain-language
+delivery stats, an "All issues" history table (vol., title linked to its danbenson.me page, send
+start time in Taipei, recipients, delivered, bounced/failed, unsubscribes within 7 days — send
+start is the earliest `sends.sentAt`, since `campaigns.sentAt` is set when the last batch finishes), and "capacity" gauges against the free-tier limits below, plus plain-language
 warnings when a gauge reaches 70% (amber) or 90% (red). Computed in `lib/dashboard.ts`
 (`getDashboardStats()`), served by `GET /api/admin/dashboard`. No schema changes. The limits
 live in the `LIMITS` constant at the top of `lib/dashboard.ts`; update them if a provider

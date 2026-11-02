@@ -2,7 +2,7 @@ import { count, desc, eq, gte, inArray, lt, and, sql } from "drizzle-orm";
 import { db } from "./db";
 import { campaigns, images, sends, subscribers } from "./schema";
 import { SEND_BATCH_SIZE } from "./sendCampaign";
-import { parseVolume } from "./issues";
+import { issueWebUrl, parseVolume } from "./issues";
 
 // Free-tier ceilings the dashboard measures against. Keep in sync with the "Free-tier limits"
 // section of CLAUDE.md; if a provider changes its limits, change them here.
@@ -17,6 +17,23 @@ export const LIMITS = {
 
 // Assumption behind the photo-transfer estimate: issues per month.
 const ASSUMED_ISSUES_PER_MONTH = 1; // roughly monthly, per Dan (2026-11)
+
+export interface IssueRow {
+  id: string;
+  vol: number | null;
+  title: string;
+  status: string;
+  // When the first email went out (a big list can take several days on Resend's free plan).
+  startedAt: string | null;
+  // When the last batch finished; null while still sending.
+  finishedAt: string | null;
+  recipients: number;
+  delivered: number;
+  bounced: number;
+  failed: number;
+  unsubscribedWithin7Days: number | null;
+  webUrl: string | null;
+}
 
 export type Level = "ok" | "watch" | "high";
 
@@ -54,6 +71,8 @@ export interface DashboardStats {
     failed: number;
     unsubscribedWithin7Days: number | null;
   };
+  // Every sent (or still-sending) issue, newest first. No open/click tracking, by choice.
+  issues: IssueRow[];
   gauges: Gauge[];
   daysToSendList: number;
   warnings: string[];
@@ -181,6 +200,60 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     };
   }
 
+  // --- Issue history -------------------------------------------------------------------------
+  const sentCampaigns = await db
+    .select()
+    .from(campaigns)
+    .where(inArray(campaigns.status, ["sent", "sending"]));
+  const perCampaign = await db
+    .select({
+      campaignId: sends.campaignId,
+      status: sends.status,
+      n: count(),
+      first: sql<string | null>`min(${sends.sentAt})`,
+    })
+    .from(sends)
+    .groupBy(sends.campaignId, sends.status);
+  const unsubTimes = (
+    await db
+      .select({ at: subscribers.unsubscribedAt })
+      .from(subscribers)
+      .where(sql`${subscribers.unsubscribedAt} is not null`)
+  ).map((r) => new Date(r.at as Date).getTime());
+
+  const issues: IssueRow[] = sentCampaigns.map((c) => {
+    const counts: Record<string, number> = {};
+    let first: number | null = null;
+    for (const r of perCampaign) {
+      if (r.campaignId !== c.id) continue;
+      counts[r.status] = Number(r.n);
+      if (r.first) {
+        const t = new Date(r.first).getTime();
+        if (first === null || t < first) first = t;
+      }
+    }
+    const start = first ?? (c.sentAt ? new Date(c.sentAt).getTime() : null);
+    let unsubs: number | null = null;
+    if (start !== null) {
+      unsubs = unsubTimes.filter((t) => t >= start && t < start + WEEK_MS).length;
+    }
+    return {
+      id: c.id,
+      vol: parseVolume(c.markdownBody),
+      title: c.title || c.subject || "(untitled)",
+      status: c.status,
+      startedAt: start !== null ? new Date(start).toISOString() : null,
+      finishedAt: c.status === "sent" && c.sentAt ? new Date(c.sentAt).toISOString() : null,
+      recipients: Object.values(counts).reduce((a, b) => a + b, 0),
+      delivered: (counts["sent"] ?? 0) + (counts["delivered"] ?? 0),
+      bounced: counts["bounced"] ?? 0,
+      failed: counts["failed"] ?? 0,
+      unsubscribedWithin7Days: unsubs,
+      webUrl: c.status === "sent" ? issueWebUrl(c) : null,
+    };
+  });
+  issues.sort((a, b) => (b.startedAt ?? "9999").localeCompare(a.startedAt ?? "9999"));
+
   // --- Storage ---------------------------------------------------------------------------------
   const [blob] = await db.select({ total: sql<string>`coalesce(sum(${images.size}), 0)` }).from(images);
   const blobBytes = Number(blob?.total ?? 0);
@@ -277,6 +350,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       sources,
     },
     lastIssue,
+    issues,
     gauges,
     daysToSendList,
     warnings,
