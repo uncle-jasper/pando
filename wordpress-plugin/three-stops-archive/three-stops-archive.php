@@ -2,7 +2,7 @@
 /**
  * Plugin Name: 3 Stops from Main Archive
  * Description: Shows past issues of the "3 Stops from Main" newsletter (fetched from Pando) as a list under the signup form on /newsletter, with one page per issue at /newsletter/vol-001-title. Shows nothing until the first issue has been sent.
- * Version: 1.2.3
+ * Version: 1.2.4
  * Author: Dan Benson
  * License: GPL-2.0-or-later
  */
@@ -208,10 +208,13 @@ add_filter('the_posts', function ($posts, $query) {
     if (is_admin() || !$query->is_main_query()) {
         return $posts;
     }
-    $vol = (int) $query->get('tsm_vol');
-    if ($vol <= 0) {
+    // Not an issue URL unless tsm_vol is set and all digits. "000" is a real volume (vol. 0),
+    // so don't treat 0 as "not set".
+    $raw = (string) $query->get('tsm_vol');
+    if ($raw === '' || !ctype_digit($raw)) {
         return $posts;
     }
+    $vol = (int) $raw;
 
     $data = tsm_api('/issues/' . $vol);
     if (!is_array($data) || !empty($data['_missing']) || empty($data['issue'])) {

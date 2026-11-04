@@ -324,7 +324,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
         : "Neon's paid plan is pay-as-you-go, usually a few dollars a month.";
     warnings.push(`${g.label}: ${Math.round(g.pct)}% of the free limit. ${tail}`);
   }
-  if (estimateSource && !parseVolume(estimateSource.markdownBody)) {
+  if (estimateSource && parseVolume(estimateSource.markdownBody) === null) {
     warnings.push(
       `${last ? "The last issue" : "The latest draft"} has no "-# Vol. NNN" line, so it won't appear in the website archive. Add one (for example "-# Vol. 002") to the masthead.`
     );
