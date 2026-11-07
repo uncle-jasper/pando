@@ -355,6 +355,17 @@ Decisions made 2026-10-03:
   No Vol. line → falls back to `/p/[id]` and "View in browser". Inbox preview text (hidden
   preheader) defaults to the issue's bold `**subtitle**` line when `campaign.preheader` is empty.
 
+## Photo guide + transfer estimate (2026-11-07)
+
+- **Editor photo guide** (`lib/photoGuide.ts`, `components/PhotoGuideLine.tsx`): muted line in the
+  campaign editor's top bar showing word count, photos vs. suggested, galleries vs. suggested.
+  Rough guide only (Dan uses more or fewer as he likes). Rates baselined on issues 001 + 002:
+  ~1 photo per 120 words (min 4), ~1 two-photo gallery per 450 words. Word count skips `-#`
+  lines, image markup, link URLs and `:::` fences.
+- **Dashboard photo-transfer estimate** now uses the AVERAGE photo weight of the last 6 sent issues
+  (re-adjusts after every send), falling back to the average of drafts with photos before the first
+  send. Previously it used only the single most recent issue/draft, which swung wildly.
+
 ## Useful entry points
 
 - `lib/dashboard.ts` / `/admin/dashboard` — usage + capacity stats and warnings

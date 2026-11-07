@@ -268,23 +268,36 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   }
 
   // --- Estimated photo transfer per issue ------------------------------------------------------------
-  // Weight of the images in the most recent issue (or, before anything has been sent, the most
-  // recently edited campaign), multiplied by the list size — assumes every subscriber loads every
-  // image once, which is realistic because Apple Mail preloads images for its users.
-  let estimateSource = last;
-  if (!estimateSource) {
-    const [latest] = await db.select().from(campaigns).orderBy(desc(campaigns.updatedAt)).limit(1);
-    estimateSource = latest;
+  // Average photo weight per issue, multiplied by the list size — assumes every subscriber loads every
+  // image once, which is realistic because Apple Mail preloads images for its users. The average comes
+  // from the most recent sent issues (up to ESTIMATE_ISSUE_WINDOW), so it re-adjusts automatically after
+  // every send. Before anything has been sent, it averages the drafts that have photos in them.
+  const ESTIMATE_ISSUE_WINDOW = 6;
+  let estimatePool = [...sentCampaigns].sort((a, b) =>
+    String(b.sentAt ?? b.updatedAt).localeCompare(String(a.sentAt ?? a.updatedAt))
+  );
+  const estimateFromSent = estimatePool.length > 0;
+  if (!estimateFromSent) estimatePool = await db.select().from(campaigns);
+  const imageUrlsOf = (c: typeof campaigns.$inferSelect) =>
+    Array.from(new Set(`${c.markdownBody}\n${c.heroImageUrl ?? ""}`.match(/https:\/\/[^\s)"']+/g) ?? []));
+  const allEstimateUrls = Array.from(new Set(estimatePool.flatMap(imageUrlsOf)));
+  const sizeByUrl = new Map<string, number>();
+  if (allEstimateUrls.length > 0) {
+    const rows = await db.select({ url: images.url, size: images.size }).from(images).where(inArray(images.url, allEstimateUrls));
+    for (const r of rows) sizeByUrl.set(r.url, r.size);
   }
-  let issueImageBytes = 0;
-  if (estimateSource) {
-    const text = `${estimateSource.markdownBody}\n${estimateSource.heroImageUrl ?? ""}`;
-    const urls = Array.from(new Set(text.match(/https:\/\/[^\s)"']+/g) ?? []));
-    if (urls.length > 0) {
-      const rows = await db.select({ size: images.size }).from(images).where(inArray(images.url, urls));
-      issueImageBytes = rows.reduce((a, r) => a + r.size, 0);
-    }
-  }
+  const issueWeights = estimatePool
+    .map((c) => imageUrlsOf(c).reduce((a, u) => a + (sizeByUrl.get(u) ?? 0), 0))
+    .filter((w) => w > 0)
+    .slice(0, ESTIMATE_ISSUE_WINDOW);
+  const issueImageBytes = issueWeights.length
+    ? Math.round(issueWeights.reduce((a, b) => a + b, 0) / issueWeights.length)
+    : 0;
+  const estimateBasis = issueWeights.length === 0
+    ? "no photos yet"
+    : estimateFromSent
+      ? `average of the last ${issueWeights.length} sent issue${issueWeights.length === 1 ? "" : "s"}`
+      : `average of ${issueWeights.length} draft${issueWeights.length === 1 ? "" : "s"}, until an issue is sent`;
   const estimatedMonthlyTransfer = issueImageBytes * subscribed * ASSUMED_ISSUES_PER_MONTH;
 
   // --- Gauges ----------------------------------------------------------------------------------------
@@ -298,7 +311,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       estimatedMonthlyTransfer,
       LIMITS.blobTransferBytes,
       "bytes",
-      `Estimate only: ${formatBytes(issueImageBytes)} of photos per issue × ${subscribed} subscribers × ${ASSUMED_ISSUES_PER_MONTH} issue${ASSUMED_ISSUES_PER_MONTH === 1 ? "" : "s"} a month. Vercel free tier: 10 GB a month. Real usage is on Vercel's usage page.`
+      `Estimate only: ${formatBytes(issueImageBytes)} of photos per issue (${estimateBasis}) × ${subscribed} subscribers × ${ASSUMED_ISSUES_PER_MONTH} issue${ASSUMED_ISSUES_PER_MONTH === 1 ? "" : "s"} a month. Vercel free tier: 10 GB a month. Real usage is on Vercel's usage page.`
     ),
   ];
   if (dbBytes !== null) {
@@ -324,7 +337,9 @@ export async function getDashboardStats(): Promise<DashboardStats> {
         : "Neon's paid plan is pay-as-you-go, usually a few dollars a month.";
     warnings.push(`${g.label}: ${Math.round(g.pct)}% of the free limit. ${tail}`);
   }
-  if (estimateSource && parseVolume(estimateSource.markdownBody) === null) {
+  const volCheck =
+    last ?? (await db.select().from(campaigns).orderBy(desc(campaigns.updatedAt)).limit(1))[0];
+  if (volCheck && parseVolume(volCheck.markdownBody) === null) {
     warnings.push(
       `${last ? "The last issue" : "The latest draft"} has no "-# Vol. NNN" line, so it won't appear in the website archive. Add one (for example "-# Vol. 002") to the masthead.`
     );

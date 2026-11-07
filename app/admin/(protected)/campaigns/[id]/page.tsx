@@ -13,6 +13,7 @@ import StatusLine from "@/components/StatusLine";
 import EmailPreviewModal from "@/components/EmailPreviewModal";
 import type { GalleryDimensions } from "@/lib/markdown/parse";
 import { hasDateLine, todayInTaipei } from "@/lib/sendDate";
+import PhotoGuideLine from "@/components/PhotoGuideLine";
 
 interface Campaign {
   id: string;
@@ -330,6 +331,7 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
             </button>
           </span>
         )}
+        <PhotoGuideLine markdown={markdown} hasHeroImage={!!heroImageUrl} />
         <span className="text-xs text-[var(--muted)] w-16 text-right">
           {saveState === "saving" ? "saving…" : saveState === "saved" ? "saved" : ""}
         </span>
