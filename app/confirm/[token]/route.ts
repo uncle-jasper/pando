@@ -4,32 +4,22 @@ import { db } from "@/lib/db";
 import { subscribers } from "@/lib/schema";
 import { verifySubscriberToken } from "@/lib/tokens";
 import { getOrCreateSettings } from "@/lib/settings";
-import { newSubscriberNotificationHtml } from "@/lib/transactional";
+import { confirmPageHtml, newSubscriberNotificationHtml } from "@/lib/transactional";
 import { sendEmail } from "@/lib/resend";
 
-function page(message: string): NextResponse {
-  const html = `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Subscription</title>
-<style>
-  body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background:#f5f0e8; color:#2c2416; display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; }
-  main { max-width:420px; text-align:center; padding:32px; }
-  h1 { font-size:20px; }
-</style>
-</head>
-<body><main><h1>${message}</h1></main></body>
-</html>`;
+async function page(message: string): Promise<NextResponse> {
+  const settings = await getOrCreateSettings();
+  const html = confirmPageHtml(message, settings.newsletterName?.trim() || null, settings);
   return new NextResponse(html, { headers: { "content-type": "text/html; charset=utf-8" } });
 }
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const subscriberId = verifySubscriberToken(token);
-  if (!subscriberId) return page("This confirmation link is invalid.");
+  if (!subscriberId) return await page("This confirmation link is invalid.");
 
   const [subscriber] = await db.select().from(subscribers).where(eq(subscribers.id, subscriberId));
-  if (!subscriber) return page("This confirmation link is invalid.");
+  if (!subscriber) return await page("This confirmation link is invalid.");
 
   if (subscriber.status !== "subscribed") {
     await db
@@ -46,7 +36,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
           to: settings.notifyEmail,
           from: `${settings.fromName} <${settings.fromEmail}>`,
           subject: "New subscriber",
-          html: newSubscriberNotificationHtml(subscriber.email, subscriber.name),
+          html: newSubscriberNotificationHtml(subscriber.email, subscriber.name, settings),
         });
       }
     } catch {
@@ -54,5 +44,5 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
     }
   }
 
-  return page("You're subscribed! Thanks for confirming.");
+  return await page("You're subscribed. Thanks for confirming — the next issue will land in your inbox.");
 }

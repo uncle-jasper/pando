@@ -3,7 +3,7 @@ import { db } from "./db";
 import { subscribers } from "./schema";
 import { getOrCreateSettings } from "./settings";
 import { makeSubscriberToken } from "./tokens";
-import { confirmationEmailHtml, confirmUrlFor } from "./transactional";
+import { confirmationEmailHtml, confirmationEmailSubject, confirmUrlFor } from "./transactional";
 import { sendEmail } from "./resend";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -42,14 +42,15 @@ export async function subscribePublic(
   }
 
   const token = makeSubscriberToken(subscriber.id);
-  const html = confirmationEmailHtml(confirmUrlFor(token), settings.newsletterName?.trim() || null);
+  const newsletterName = settings.newsletterName?.trim() || null;
+  const html = confirmationEmailHtml(confirmUrlFor(token), newsletterName, settings);
 
   try {
     await sendEmail({
       to: email,
       from: `${settings.fromName} <${settings.fromEmail}>`,
       replyTo: settings.replyTo,
-      subject: "Confirm your subscription",
+      subject: confirmationEmailSubject(newsletterName),
       html,
     });
   } catch {
