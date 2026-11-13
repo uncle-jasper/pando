@@ -249,7 +249,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       bounced: counts["bounced"] ?? 0,
       failed: counts["failed"] ?? 0,
       unsubscribedWithin7Days: unsubs,
-      webUrl: c.status === "sent" ? issueWebUrl(c) : null,
+      webUrl: c.status === "sent" || c.status === "sending" ? issueWebUrl(c) : null,
     };
   });
   issues.sort((a, b) => (b.startedAt ?? "9999").localeCompare(a.startedAt ?? "9999"));

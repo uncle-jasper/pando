@@ -1,4 +1,4 @@
-import { desc, eq, ne } from "drizzle-orm";
+import { desc, inArray, notInArray } from "drizzle-orm";
 import { db } from "./db";
 import { campaigns } from "./schema";
 import { deriveTitle, parseMarkdown } from "./markdown/parse";
@@ -181,10 +181,13 @@ export async function getSentIssues(origin: string, includeDrafts = false): Prom
   const sentRows = await db
     .select()
     .from(campaigns)
-    .where(eq(campaigns.status, "sent"))
+    // "sending" counts as published: most subscribers already have it (big lists spread over days,
+    // and a campaign with failed sends stays "sending" until the nightly retry), and the email's
+    // links point at the archive, so it must not vanish from danbenson.me in the meantime.
+    .where(inArray(campaigns.status, ["sent", "sending"]))
     .orderBy(desc(campaigns.sentAt));
   const draftRows = includeDrafts
-    ? await db.select().from(campaigns).where(ne(campaigns.status, "sent")).orderBy(desc(campaigns.updatedAt))
+    ? await db.select().from(campaigns).where(notInArray(campaigns.status, ["sent", "sending"])).orderBy(desc(campaigns.updatedAt))
     : [];
   const rows = [...sentRows, ...draftRows];
   const dimensions = rows.length ? await getImageDimensions() : {};
@@ -195,7 +198,7 @@ export async function getSentIssues(origin: string, includeDrafts = false): Prom
     if (vol === null || seen.has(vol)) continue;
     seen.add(vol);
     const detail = toDetail(row, vol, origin, dimensions);
-    if (row.status !== "sent") detail.draft = true;
+    if (row.status !== "sent" && row.status !== "sending") detail.draft = true;
     out.push(detail);
   }
   return out.sort((a, b) => b.vol - a.vol);

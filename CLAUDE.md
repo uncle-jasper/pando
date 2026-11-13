@@ -366,6 +366,18 @@ Decisions made 2026-10-03:
   (re-adjusts after every send), falling back to the average of drafts with photos before the first
   send. Previously it used only the single most recent issue/draft, which swung wildly.
 
+## Send throttling + failed-send retry (2026-11-13)
+
+Vol. 000 (first real send) had one 429 from Resend: its API caps at **10 requests/second**, and
+8-concurrent chunks fired back to back exceeded it. `lib/sendCampaign.ts` now: makes each chunk of
+8 take >= 1.1s (~7/s); retries a temporary-looking error (429, timeout, 5xx) once after 1.5s;
+and if anyone still failed, leaves the campaign in `sending` so the nightly cron retries them.
+A second failure marks that send's error with `[gave up] ` and the subscriber is skipped from then
+on (no schema change). Because a campaign can now sit in `sending` after most people have it, the
+archive feed (`lib/issues.ts`), `/p/[id]` and the dashboard's web link treat `sending` like `sent`.
+To retry a campaign that was marked `sent` before this fix: `update campaigns set status = 'sending'
+where id = '...'`, then wait for the cron or run it from Vercel → Settings → Cron Jobs.
+
 ## Useful entry points
 
 - `lib/dashboard.ts` / `/admin/dashboard` — usage + capacity stats and warnings

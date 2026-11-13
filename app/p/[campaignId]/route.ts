@@ -15,7 +15,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ camp
   // via the signed ?k= key that test emails carry (see makePreviewKey in lib/tokens.ts).
   const key = req.nextUrl.searchParams.get("k");
   const draftPreview = !!campaign && campaign.status === "draft" && !!key && verifyPreviewKey(campaign.id, key);
-  if (!campaign || (campaign.status !== "sent" && !draftPreview)) {
+  if (!campaign || (campaign.status !== "sent" && campaign.status !== "sending" && !draftPreview)) {
     return new NextResponse("Not found.", { status: 404 });
   }
 
