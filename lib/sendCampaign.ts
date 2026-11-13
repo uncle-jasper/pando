@@ -84,13 +84,26 @@ async function sendToOne(
       await sleep(RETRY_DELAY_MS);
       result = await send();
     }
-    await db.insert(sends).values({
-      campaignId,
-      subscriberId: subscriber.id,
-      status: "sent",
-      providerMessageId: result?.id,
-      sentAt: new Date(),
-    });
+    // A successful retry replaces this subscriber's earlier "failed" row rather than adding a
+    // second row, so the dashboard doesn't keep counting a failure that was later delivered.
+    const [prior] = await db
+      .select()
+      .from(sends)
+      .where(and(eq(sends.campaignId, campaignId), eq(sends.subscriberId, subscriber.id)));
+    if (prior) {
+      await db
+        .update(sends)
+        .set({ status: "sent", error: null, providerMessageId: result?.id, sentAt: new Date() })
+        .where(eq(sends.id, prior.id));
+    } else {
+      await db.insert(sends).values({
+        campaignId,
+        subscriberId: subscriber.id,
+        status: "sent",
+        providerMessageId: result?.id,
+        sentAt: new Date(),
+      });
+    }
     return "sent";
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Send failed.";
